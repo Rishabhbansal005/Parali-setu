@@ -142,6 +142,20 @@ labels, buttons, or error messages in the farmer-facing screens.
 
 ---
 
+## RULE 9 — Maintain Learning Log & Distinguish BUILT vs PLANNED
+
+**9a.** Maintain `docs/LEARNING_LOG.md` after every completed milestone,
+hardening cycle, or feature phase. Document what was built, unexpected technical
+hurdles (e.g. pooler connection strings, library conflicts, CVEs), architectural
+decisions made, and real verification metrics.
+
+**9b.** Rigorously classify every component, feature, API endpoint, and capability
+as either **BUILT** or **PLANNED** in all project documentation, summaries,
+and judge-facing materials. Never describe a planned, stubbed, or mocked feature
+as working or production-ready.
+
+---
+
 ## Summary checklist (run before every commit)
 
 - [ ] Read SPEC.md? (or confirmed it has not changed since last read)
@@ -153,3 +167,5 @@ labels, buttons, or error messages in the farmer-facing screens.
 - [ ] Tests written for any new logic code?
 - [ ] APK size checked (if app code changed)?
 - [ ] No English in farmer-facing UI strings?
+- [ ] Learning log updated and all features honestly tagged as BUILT or PLANNED?
+
