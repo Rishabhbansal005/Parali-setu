@@ -1,0 +1,22 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: paralisetu_db
+    environment:
+      POSTGRES_USER: paralisetu
+      POSTGRES_PASSWORD: paralisetu_dev   # local dev only — change for any real deployment
+      POSTGRES_DB: paralisetu
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paralisetu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pgdata:

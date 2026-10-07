@@ -1,0 +1,28 @@
+# All yield values below are ASSUMPTIONS — must be verified with KVK / ICAR
+# before using in any real payment calculation.
+# See SPEC.md §9 for the formula.
+# Edit this file (or override via YIELD_CONFIG_PATH in .env) without touching business logic.
+
+# tonnes of dry stubble per acre, by paddy variety and harvest method
+# ASSUMPTION — verify with KVK/ICAR
+yield_factor:
+  PR-126:
+    combine: 2.0    # ASSUMPTION
+    manual:  1.2    # ASSUMPTION
+  Pusa-44:
+    combine: 2.5    # ASSUMPTION
+    manual:  1.5    # ASSUMPTION
+  Basmati:
+    combine: 1.5    # ASSUMPTION
+    manual:  0.9    # ASSUMPTION
+  other:
+    combine: 2.0    # ASSUMPTION — uses PR-126 default
+    manual:  1.2    # ASSUMPTION — uses PR-126 default
+
+# ± range applied to the central estimate
+yield_range_factor_low:  0.80   # ASSUMPTION — ±20% lower bound
+yield_range_factor_high: 1.20   # ASSUMPTION — ±20% upper bound
+
+# Platform fee as a fraction of final payment
+# ASSUMPTION — define the actual fee structure before launch
+platform_fee_pct: 0.05

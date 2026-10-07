@@ -1,0 +1,82 @@
+# ==============================================================================
+# ParaliSetu .gitignore
+# ==============================================================================
+
+# 1. Reference repositories (strictly excluded from commits)
+references/
+Farmlink-main/
+Lima-App-main/
+ViridiApp-main/
+miniproject-master/
+parali-main/
+rewire-app-main/
+tractor-rental-backend-main/
+tractor-rental-frontend-main/
+*.zip
+
+# 2. Environment variables, secrets, credentials, and keys
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials.json
+service-account*.json
+
+# 3. Python cache, virtual environments, test artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+.venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# 4. Node / JavaScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.next/
+out/
+
+# 5. Flutter / Dart outputs & packages
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+app/build/
+*.apk
+*.aab
+
+# 6. Local database files
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+postgres-data/
+
+# 7. IDE, Editor, and OS files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 8. Permissions (Placeholder README is tracked; real emails/attachments ignored)
+docs/permissions/*
+!docs/permissions/README.md
