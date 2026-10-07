@@ -3,11 +3,10 @@ import uuid
 from typing import Generator, List, Dict, Any, Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
-from app.core.security import decode_token, assert_roles
+from app.core.security import decode_token, assert_roles, JWTError
 from app.models.user import User
 
 bearer_scheme = HTTPBearer(auto_error=True)
