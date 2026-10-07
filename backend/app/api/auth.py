@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from jose import JWTError
 
+from app.core.config import settings
 from app.core.database import SessionLocal
 from app.dependencies import get_db, get_current_user
 from app.core.security import (
@@ -55,13 +56,15 @@ def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
     phone = req.phone_e164.strip()
     expected_otp = _MOCK_OTP_STORE.get(phone)
 
-    # For dev convenience, also allow "123456" as universal bypass if no OTP stored or test
-    if not expected_otp and req.otp != "123456":
+    # Universal bypass "123456" is strictly permitted ONLY when DEMO_MODE is True
+    is_demo_bypass = bool(settings.DEMO_MODE and req.otp == "123456")
+
+    if not expected_otp and not is_demo_bypass:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No OTP requested for this number or expired",
         )
-    if expected_otp and req.otp != expected_otp and req.otp != "123456":
+    if expected_otp and req.otp != expected_otp and not is_demo_bypass:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Incorrect OTP",

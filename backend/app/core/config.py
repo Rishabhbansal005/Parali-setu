@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "ParaliSetu API"
     DEBUG: bool = False
+    DEMO_MODE: bool = False             # If True, universal OTP '123456' is accepted
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # ── Yield config path ─────────────────────────────────────────────────────
