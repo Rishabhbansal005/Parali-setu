@@ -3,6 +3,13 @@ Seed script for ParaliSetu demo data per SPEC.md Section 14.
 All data created by this script is SIMULATED for the demo.
 """
 from __future__ import annotations
+import sys
+from pathlib import Path
+
+# Add backend directory to sys.path
+backend_dir = Path(__file__).resolve().parents[1]
+sys.path.append(str(backend_dir))
+
 import uuid
 import datetime
 from sqlalchemy.orm import Session

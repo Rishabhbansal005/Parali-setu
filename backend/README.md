@@ -83,6 +83,7 @@ python -m pytest tests -v
 
 - **In-Memory OTP Store:** The OTP store `_MOCK_OTP_STORE` lives in process memory. It operates on a single Python process only; restarting the server clears pending state, and multi-process deployments (`uvicorn --workers N`) cannot share state without Redis.
 - **OTP Expiry & Rate Limiting (Implemented):** OTP expiry is enforced using `OTP_EXPIRY_SECONDS` (300s); expired codes are rejected. Throttling is enforced per phone number via `OTP_MAX_SENDS_PER_WINDOW` (5 requests / 10 min) and `OTP_MAX_VERIFY_ATTEMPTS` (5 consecutive wrong attempts triggers a 5-minute lockout). Note: Because storage is in-process memory, limits apply per worker process.
+- **Lockout Scope & Persistence:** Lockout is tracked per phone number, meaning an attacker could intentionally lock out another user's phone number by repeatedly guessing wrong OTPs; furthermore, all throttling counters and lockouts reset whenever the server process restarts.
 - **Mocked Payments:** The escrow payment adapter (`MockPaymentProvider`) simulates authorization and release; it does not connect to live payment gateways.
 - **Simulated Demo Data:** All records populated by `scripts/seed.py` (farmers, farms, machines, bookings) are simulated test datasets for demo presentation purposes.
 

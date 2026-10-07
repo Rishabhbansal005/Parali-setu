@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from typing import List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +27,26 @@ class Settings(BaseSettings):
     DATABASE_URL: str = (
         "postgresql+psycopg2://paralisetu:paralisetu_dev@localhost:5432/paralisetu"
     )
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def clean_database_url(cls, v: str) -> str:
+        if not v:
+            return v
+        import urllib.parse
+        # Ensure scheme is postgresql+psycopg2 for SQLAlchemy
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif v.startswith("postgresql://") and not v.startswith("postgresql+"):
+            v = v.replace("postgresql://", "postgresql+psycopg2://", 1)
+        # Strip pgbouncer query parameter which libpq / psycopg2 rejects
+        parsed = urllib.parse.urlsplit(v)
+        if "pgbouncer" in parsed.query:
+            qs = urllib.parse.parse_qs(parsed.query)
+            qs.pop("pgbouncer", None)
+            new_query = urllib.parse.urlencode(qs, doseq=True)
+            v = urllib.parse.urlunsplit((parsed.scheme, parsed.netloc, parsed.path, new_query, parsed.fragment))
+        return v
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     JWT_SECRET_KEY: str = "CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT"

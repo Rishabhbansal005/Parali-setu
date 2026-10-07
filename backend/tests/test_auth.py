@@ -3,9 +3,10 @@ import time
 from app.core.config import settings, Settings
 from app.api.auth import _MOCK_OTP_STORE
 
-def test_demo_mode_defaults_to_false():
+def test_demo_mode_defaults_to_false(monkeypatch):
     """Verify DEMO_MODE defaults to False if the variable is missing."""
-    fresh_settings = Settings()
+    monkeypatch.delenv("DEMO_MODE", raising=False)
+    fresh_settings = Settings(_env_file=None)
     assert fresh_settings.DEMO_MODE is False
 
 
