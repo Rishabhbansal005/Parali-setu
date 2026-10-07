@@ -16,7 +16,7 @@
 - **FastAPI REST API Structure:** Structured modular application under `backend/app/` with clean separation of models, schemas, API routers (`auth`, `farms`, `estimate`), and business services.
 - **Relational & Spatial Database Schema:** Designed and scripted 12 relational models via SQLAlchemy 2.0 and GeoAlchemy2 covering the full lifecycle: `users`, `farms`, `buyers`, `machines`, `trucks`, `bookings`, `estimates`, `offers`, `payments`, `burn_checks`, `impact_log`, and `weighbridge_records`.
 - **Alembic Database Migrations:** Created baseline Alembic migration script (`001_initial_schema.py`) initializing the schema with native PostGIS extension activation and spatial indexing (`idx_farms_location`).
-- **Estimation Service:** Implemented agronomic algorithms modeling stubble yield by rice variety (e.g. `PR-126`, `Pusa-44`, `Basmati`) and calculated avoided emissions ($\text{CO}_2$, $\text{PM}_{2.5}$, ash) based on published ICAR/CPCB emission factors.
+- **Estimation Service:** Implemented agronomic algorithms modeling stubble yield range (low/mid/high) by rice variety (e.g. `PR-126`, `Pusa-44`, `Basmati`) and estimated gross income range. Note: Avoided emissions ($\text{CO}_2$, $\text{PM}_{2.5}$, ash) remain **PLANNED** placeholders (`None`) in `impact_log` awaiting verified published factors per Rule 6.
 - **Simulated Seeding Pipeline:** Created `backend/scripts/seed.py` generating realistic geographic seed data across Tarn Taran, Amritsar, Ludhiana, and Ferozepur districts.
 
 ### 2. Engineering Challenges & Root Causes
@@ -84,7 +84,8 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 | Core REST API (FastAPI) | **BUILT** | Routes for auth, farms, estimates live. |
 | JWT Authentication & OTP Lockout | **BUILT** | PyJWT 2.15, expiry, rate-limits, lockout. |
 | PostGIS Spatial Relational Models | **BUILT** | 12 tables + spatial index active on Supabase. |
-| Agronomic Estimation Formulas | **BUILT** | Stubble tonnage and carbon/ash offsets. |
+| Agronomic Estimation Formulas | **BUILT** | Stubble tonnage range and income estimates. Avoided emissions remain PLANNED placeholders. |
+
 | Live Seed Data on Supabase | **BUILT** | 37 users, 20 farms, 5 buyers, 6 machines, 5 trucks. |
 | Flutter Farmer Mobile App (Phase 1) | **PLANNED** | Vernacular UI, offline SQLite sync, booking flow. |
 | Aggregator & Buyer Web Dashboards (Phase 2 & 3) | **PLANNED** | Next.js 14, interactive maps, live dispatch view. |

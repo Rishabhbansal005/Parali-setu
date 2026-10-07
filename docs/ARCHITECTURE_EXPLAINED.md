@@ -17,8 +17,9 @@ graph TD
     subgraph Gateway["API & Security Layer (FastAPI) [BUILT]"]
         AuthRouter["/api/v1/auth<br/>(OTP, JWT PyJWT, Rate Limiting)"]
         FarmsRouter["/api/v1/farms<br/>(Farms, Geometry Validation)"]
-        EstimateRouter["/api/v1/estimate<br/>(Agronomic Yield & Emissions)"]
-        BookingRouter["/api/v1/bookings<br/>(Collection Bookings & Status)"]
+        EstimateRouter["/estimates<br/>(Agronomic Stubble Yield & Income Range)"]
+        BookingRouter["/bookings<br/>(Collection Bookings & Status)"]
+
     end
 
     subgraph Services["Core Logic & Engine Services"]
@@ -54,10 +55,11 @@ graph TD
 
 | Layer / Component | Technology | Implementation Status | Description |
 | :--- | :--- | :--- | :--- |
-| **Auth API** | FastAPI, PyJWT, Passlib | **BUILT** | Phone OTP verification, token generation, 5-minute lockout on brute force, demo mode toggle. |
-| **Farms & Geography API** | FastAPI, GeoAlchemy2, PostGIS | **BUILT** | Register land holdings with WGS84 GPS point coordinates, area in acres, and harvest dates. |
-| **Stubble Estimation Service** | Python (ICAR agronomic factors) | **BUILT** | Calculates expected stubble tonnage from crop type + acreage, and potential CO₂, PM2.5, and ash emissions avoided. |
+| **Auth API** | FastAPI, PyJWT, Passlib | **BUILT** | Phone OTP verification, token generation, 5-minute lockout on brute force, demo mode toggle (`/auth/otp/send`, `/auth/otp/verify`). |
+| **Farms & Geography API** | FastAPI, GeoAlchemy2, PostGIS | **BUILT** | Register land holdings with WGS84 GPS point coordinates, area in acres, and crop varieties (`/farmers/{farmer_id}/farms`). |
+| **Stubble Estimation Service** | Python (SPEC.md agronomic factors) | **BUILT** | Calculates dry stubble tonnage range (low/mid/high) and estimated income range from acreage, variety, and harvest method (`/estimates`). |
 | **Relational & Spatial Database** | PostgreSQL 15 + PostGIS 3.3 | **BUILT** | 12 tables active on Supabase: `users`, `farms`, `buyers`, `machines`, `trucks`, `bookings`, `estimates`, `offers`, `payments`, `burn_checks`, `impact_log`, `weighbridge_records`. |
+| **Environmental Impact & Emissions Factors** | Python (ICAR / CPCB factors) | **PLANNED** | Stored as `None` placeholders in `impact_log` model per SPEC.md §9 & §11 pending verification with published sources. |
 | **Farmer Mobile Client** | Flutter / Dart | **PLANNED** | Vernacular UI (Hindi/Punjabi), offline SQLite storage, 3-step stubble pickup booking. |
 | **Aggregator & Buyer Dashboards** | Next.js 14 / TypeScript | **PLANNED** | Live cluster maps, dispatch schedules, digital weighbridge slips, and escrow payment processing. |
 | **Baler & Truck Dispatch Optimizer** | Google OR-Tools + OSRM | **PLANNED** | Solves vehicle routing with capacity and time windows across rural Punjab road networks. |
@@ -67,76 +69,90 @@ graph TD
 
 ## 3. End-to-End Request Walkthrough: Login -> Create Farm -> Estimate
 
-This walkthrough details the exact data flow executed across the system during a farmer's primary onboarding journey.
+This walkthrough details the exact data flow executed across the active system during a farmer's primary onboarding journey.
 
-### Step 1: Authentication (`POST /api/v1/auth/otp/send` & `POST /api/v1/auth/otp/verify`) — **[BUILT]**
+### Step 1: Authentication (`POST /auth/otp/send` & `POST /auth/otp/verify`) — **[BUILT]**
 1. **User Action:** The farmer enters their mobile number `+919810000001` in the mobile client.
-2. **API Request (`/auth/otp/send`):**
+2. **API Request (`POST /auth/otp/send`):**
    - Payload: `{"phone_e164": "+919810000001"}`
-   - The backend checks the rate limiter (`OTP_MAX_SENDS_PER_WINDOW`).
-   - In production, it sends an SMS via Twilio/Fast2SMS. In demo mode (`DEMO_MODE=true`), it stores a 6-digit mock OTP with a timestamp in-memory.
-3. **API Request (`/auth/otp/verify`):**
+   - The backend checks rate limits (`OTP_MAX_SENDS_PER_WINDOW=5`).
+   - In demo mode (`DEMO_MODE=true`), stores a 6-digit mock OTP with timestamp in-memory.
+3. **API Request (`POST /auth/otp/verify`):**
    - Payload: `{"phone_e164": "+919810000001", "otp": "123456"}`
-   - Backend verifies the code, checks that `now - created_at <= OTP_EXPIRY_SECONDS` (300 seconds), and queries the `users` table.
-   - If the user does not exist, it inserts a new `User` record with role `farmer`.
-   - Backend generates a signed JWT access token using `PyJWT` with subject `user_id` and expiry.
-   - Response: `{"access_token": "eyJhbGciOi...", "token_type": "bearer", "role": "farmer"}`
+   - Backend verifies OTP within 300s window. If user is new, auto-registers with role `["farmer"]`.
+   - Generates signed JWT access token using `PyJWT`.
+   - Response: `{"access_token": "eyJhbGciOi...", "token_type": "bearer", "role": "farmer", "user_id": "3fa85f64-..."}`
 
-### Step 2: Register Farm Plot (`POST /api/v1/farms/`) — **[BUILT]**
-1. **User Action:** The farmer inputs farm details: 4.0 acres of `PR-126` paddy in Bhikhiwind, Tarn Taran, with GPS coordinates `(31.4519° N, 74.9272° E)`.
-2. **API Request:**
-   - Headers: `Authorization: Bearer eyJhbGciOi...`
+### Step 2: Register Farm Plot (`POST /farmers/{farmer_id}/farms`) — **[BUILT]**
+1. **User Action:** The farmer specifies 4.0 acres of `PR-126` paddy in Bhikhiwind with GPS coordinates `(31.4519° N, 74.9272° E)`.
+2. **API Request (`POST /farmers/{farmer_id}/farms`):**
+   - Headers: `Authorization: Bearer <access_token>`
    - Payload:
      ```json
      {
-       "village": "Bhikhiwind",
-       "district": "Tarn Taran",
-       "state": "Punjab",
+       "name": "Bhikhiwind Plot 1",
        "area_acres": 4.0,
-       "crop_type": "PR-126",
-       "sowing_date": "2026-06-20",
-       "expected_harvest_date": "2026-10-18",
+       "paddy_variety": "PR-126",
+       "harvest_method": "combine",
        "latitude": 31.4519,
-       "longitude": 74.9272
+       "longitude": 74.9272,
+       "khasra_number": "14//25"
      }
      ```
 3. **Database Processing:**
-   - FastAPI extracts `user_id` from the decoded JWT.
-   - GeoAlchemy2 wraps the coordinates into a WGS84 point: `Point(74.9272, 31.4519)` with SRID `4326`.
-   - SQLAlchemy executes an `INSERT INTO farms (...) VALUES (...)` in PostgreSQL.
-   - Supabase PostGIS stores the `location` column as native binary geometry with spatial index `idx_farms_location`.
-   - Response: Returns the saved farm record with unique UUID `id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"`.
-
-### Step 3: Stubble & Environmental Impact Calculation (`POST /api/v1/estimate/`) — **[BUILT]**
-1. **User Action:** The farmer taps *"Calculate Stubble & Earnings"* on their screen.
-2. **API Request:**
-   - Payload:
-     ```json
-     {
-       "crop_type": "PR-126",
-       "area_acres": 4.0,
-       "harvest_method": "combine_with_super_sms"
-     }
-     ```
-3. **Backend Service Calculation (`app/services/estimation.py`):**
-   - Applies the agronomic stubble yield factor for `PR-126` (approx. 2.5 tonnes/acre):
-     $$\text{Stubble (tonnes)} = 4.0 \times 2.5 = 10.0 \text{ tonnes}$$
-   - Computes avoided atmospheric emissions based on CPCB/ICAR emission factors:
-     - $\text{CO}_2 \text{ avoided} = 10.0 \times 1.51 \approx 15.1 \text{ tonnes}$
-     - $\text{PM}_{2.5} \text{ avoided} = 10.0 \times 0.003 \approx 30 \text{ kg}$
-   - Computes estimated net earnings based on prevailing biomass ex-factory rate:
-     $$\text{Estimated Payout} = 10.0 \text{ tonnes} \times ₹1,800/\text{tonne} = ₹18,000$$
-   - Records the estimate in `estimates` table.
+   - FastAPI verifies token permissions (farmer himself or kisan_mitra).
+   - GeoAlchemy2 converts `(longitude, latitude)` into WGS84 Point geometry (`SRID 4326`).
+   - Inserts row into `farms` table with spatial index `idx_farms_location`.
    - Response:
      ```json
      {
-       "estimated_tonnes": 10.0,
-       "estimated_bales": 333,
-       "estimated_payout_inr": 18000,
-       "co2_avoided_tonnes": 15.1,
-       "pm25_avoided_kg": 30.0
+       "id": "e4a1a011-37d4-4bb6-b6b8-6e42b26c7104",
+       "farmer_id": "3fa85f64-...",
+       "name": "Bhikhiwind Plot 1",
+       "area_acres": 4.0,
+       "paddy_variety": "PR-126",
+       "harvest_method": "combine",
+       "latitude": 31.4519,
+       "longitude": 74.9272,
+       "khasra_number": "14//25"
      }
      ```
+
+### Step 3: Stubble Yield & Income Estimation (`POST /estimates`) — **[BUILT]**
+1. **User Action:** The farmer requests an estimate with expected harvest date `2026-10-25`.
+2. **API Request (`POST /estimates`):**
+   - Headers: `Authorization: Bearer <access_token>`
+   - Payload:
+     ```json
+     {
+       "farm_id": "e4a1a011-37d4-4bb6-b6b8-6e42b26c7104",
+       "harvest_date": "2026-10-25",
+       "wheat_sow_date": "2026-11-15",
+       "buyer_price_per_tonne_inr": 1200.0
+     }
+     ```
+3. **Backend Service Calculation (`app/services/estimation.py`):**
+   - Loads variety yield factor from `yield_config.yaml` (`PR-126` combine = 2.0 t/acre).
+   - Calculates mid yield: $4.0 \times 2.0 = 8.0 \text{ tonnes}$.
+   - Applies low/high bounds ($\pm 20\%$): low = 6.4 tonnes, high = 9.6 tonnes.
+   - Calculates income range: low = ₹7,680, high = ₹11,520 (at ₹1,200/tonne).
+   - Saves record to `estimates` table.
+   - Response:
+     ```json
+     {
+       "id": "89ef6722-...",
+       "farm_id": "e4a1a011-37d4-4bb6-b6b8-6e42b26c7104",
+       "harvest_date": "2026-10-25",
+       "wheat_sow_date": "2026-11-15",
+       "stubble_tonnes_low": 6.4,
+       "stubble_tonnes_mid": 8.0,
+       "stubble_tonnes_high": 9.6,
+       "income_low_inr": 7680.0,
+       "income_high_inr": 11520.0
+     }
+     ```
+   *(Note: Avoided emissions like CO₂ and PM2.5 are **PLANNED** in `impact_log` and will be populated once official ICAR/CPCB conversion factors are verified.)*
+
 
 ### Subsequent Flow: Dispatch, Pickup & Verification — **[PLANNED]**
 - **Step 4 (Planned):** Booking is dispatched to the nearest available baler via the Google OR-Tools optimization engine.
