@@ -1,10 +1,11 @@
 from __future__ import annotations
 import uuid
+import time
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from jose import JWTError
 
 from app.core.config import settings
 from app.core.database import SessionLocal
@@ -14,6 +15,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    JWTError,
 )
 from app.models.user import User
 from app.schemas.auth import (
@@ -28,8 +30,19 @@ from app.services.otp_provider import get_otp_provider
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# In-memory OTP store for Mock mode: {phone: (otp, expiry_timestamp)}
-_MOCK_OTP_STORE: Dict[str, str] = {}
+
+@dataclass
+class OtpState:
+    otp: str = ""
+    created_at: float = 0.0
+    send_timestamps: List[float] = field(default_factory=list)
+    failed_attempts: int = 0
+    locked_until: float = 0.0
+
+
+# In-memory OTP store for Mock mode: {phone: OtpState}
+_MOCK_OTP_STORE: Dict[str, OtpState] = {}
+
 
 @router.post("/otp/send", response_model=SendOtpResponse)
 def send_otp(req: SendOtpRequest):
@@ -39,8 +52,33 @@ def send_otp(req: SendOtpRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Phone number must be in E.164 format (e.g. +919876543210)",
         )
+
+    now = time.time()
+    state = _MOCK_OTP_STORE.setdefault(phone, OtpState())
+
+    # Check lockout
+    if now < state.locked_until:
+        remaining_lock = int(state.locked_until - now)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Account locked due to too many failed attempts. Try again in {remaining_lock} seconds.",
+        )
+
+    # Prune expired send timestamps outside the throttling window
+    cutoff = now - settings.OTP_SEND_WINDOW_SECONDS
+    state.send_timestamps = [t for t in state.send_timestamps if t > cutoff]
+
+    # Enforce send rate limit
+    if len(state.send_timestamps) >= settings.OTP_MAX_SENDS_PER_WINDOW:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Too many OTP requests. Maximum {settings.OTP_MAX_SENDS_PER_WINDOW} requests per {settings.OTP_SEND_WINDOW_SECONDS // 60} minutes.",
+        )
+
     otp = generate_otp(6)
-    _MOCK_OTP_STORE[phone] = otp
+    state.otp = otp
+    state.created_at = now
+    state.send_timestamps.append(now)
 
     provider = get_otp_provider()
     provider.send_otp(phone, otp)
@@ -51,24 +89,60 @@ def send_otp(req: SendOtpRequest):
         is_mock=True,
     )
 
+
 @router.post("/otp/verify", response_model=TokenResponse)
 def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
     phone = req.phone_e164.strip()
-    expected_otp = _MOCK_OTP_STORE.get(phone)
+    now = time.time()
+    state = _MOCK_OTP_STORE.get(phone)
 
-    # Universal bypass "123456" is strictly permitted ONLY when DEMO_MODE is True
-    is_demo_bypass = bool(settings.DEMO_MODE and req.otp == "123456")
+    # 1. Lockout check: applies even if DEMO_MODE is enabled
+    if state and now < state.locked_until:
+        remaining_lock = int(state.locked_until - now)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Account temporarily locked due to excessive failed attempts. Try again in {remaining_lock} seconds.",
+        )
 
-    if not expected_otp and not is_demo_bypass:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No OTP requested for this number or expired",
-        )
-    if expected_otp and req.otp != expected_otp and not is_demo_bypass:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Incorrect OTP",
-        )
+    # 2. Check if OTP exists
+    if not state or not state.otp:
+        if settings.DEMO_MODE and req.otp == "123456":
+            pass  # Allowed in demo mode without prior send
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No OTP requested for this number or expired",
+            )
+    else:
+        # 3. Enforce time-based OTP expiry
+        if (now - state.created_at) > settings.OTP_EXPIRY_SECONDS:
+            state.otp = ""  # Invalidate expired OTP
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="OTP has expired. Please request a new one.",
+            )
+
+        # 4. Check OTP match (with DEMO_MODE bypass option)
+        is_demo_bypass = bool(settings.DEMO_MODE and req.otp == "123456")
+        if req.otp != state.otp and not is_demo_bypass:
+            state.failed_attempts += 1
+            if state.failed_attempts >= settings.OTP_MAX_VERIFY_ATTEMPTS:
+                state.locked_until = now + settings.OTP_LOCKOUT_SECONDS
+                state.failed_attempts = 0
+                state.otp = ""
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Too many failed OTP attempts. Account locked for {settings.OTP_LOCKOUT_SECONDS // 60} minutes.",
+                )
+            remaining = settings.OTP_MAX_VERIFY_ATTEMPTS - state.failed_attempts
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Incorrect OTP. {remaining} attempt(s) remaining.",
+            )
+
+        # Reset failed attempts and consume OTP on successful verification
+        state.failed_attempts = 0
+        state.otp = ""
 
     # Find or auto-register user with role ['farmer']
     user = db.query(User).filter(User.phone_e164 == phone).first()
@@ -92,14 +166,11 @@ def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
     access_token = create_access_token(payload)
     refresh_token = create_refresh_token(payload)
 
-    # Consume OTP
-    if phone in _MOCK_OTP_STORE:
-        del _MOCK_OTP_STORE[phone]
-
     return TokenResponse(
         access_token=access_token,
         refresh_token=refresh_token,
     )
+
 
 @router.post("/token/refresh", response_model=TokenResponse)
 def refresh_token(req: RefreshTokenRequest, db: Session = Depends(get_db)):
@@ -122,8 +193,9 @@ def refresh_token(req: RefreshTokenRequest, db: Session = Depends(get_db)):
         if not user or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User inactive or not found",
+                detail="User not found or deactivated",
             )
+
         new_payload = {
             "sub": str(user.id),
             "roles": user.roles,
@@ -139,15 +211,16 @@ def refresh_token(req: RefreshTokenRequest, db: Session = Depends(get_db)):
             detail="Invalid or expired refresh token",
         )
 
+
 @router.get("/me", response_model=UserProfileResponse)
-def get_my_profile(current_user: User = Depends(get_current_user)):
+def get_current_user_profile(user: User = Depends(get_current_user)):
     return UserProfileResponse(
-        id=str(current_user.id),
-        phone_e164=current_user.phone_e164,
-        name=current_user.name,
-        preferred_language=current_user.preferred_language,
-        roles=current_user.roles,
-        village=current_user.village,
-        district=current_user.district,
-        state=current_user.state,
+        id=str(user.id),
+        phone_e164=user.phone_e164,
+        name=user.name,
+        preferred_language=user.preferred_language,
+        roles=user.roles,
+        village=user.village,
+        district=user.district,
+        state=user.state,
     )

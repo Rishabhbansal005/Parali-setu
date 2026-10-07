@@ -14,7 +14,10 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=Path(__file__).resolve().parents[3] / ".env",
+        env_file=[
+            Path(__file__).resolve().parents[2] / ".env",  # backend/.env
+            Path(__file__).resolve().parents[3] / ".env",  # root/.env
+        ],
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -30,9 +33,13 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
-    # ── OTP ───────────────────────────────────────────────────────────────────
+    # ── OTP & Rate Limiting ───────────────────────────────────────────────────
     OTP_PROVIDER: str = "mock"          # 'mock' | 'firebase' | 'msg91'
     OTP_EXPIRY_SECONDS: int = 300       # 5 minutes
+    OTP_MAX_SENDS_PER_WINDOW: int = 5   # Max OTP send requests within window
+    OTP_SEND_WINDOW_SECONDS: int = 600  # 10 minute send throttling window
+    OTP_MAX_VERIFY_ATTEMPTS: int = 5    # Max wrong OTP attempts before lockout
+    OTP_LOCKOUT_SECONDS: int = 300      # 5 minute lockout duration
 
     # ── Payment ───────────────────────────────────────────────────────────────
     PAYMENT_PROVIDER: str = "mock"      # 'mock' | 'razorpay'
