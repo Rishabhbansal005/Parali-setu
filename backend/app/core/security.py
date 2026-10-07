@@ -1,7 +1,8 @@
 # Adapted from SIH2022 (miniproject-master) OTP+JWT flow pattern with owner permission.
 # Original: miniproject-master/src/api/authAPI.js (JS/React, dead Heroku backend)
-# Ported to Python / python-jose / passlib.  Malformed Authorization header bug
+# Ported to Python / PyJWT / passlib. Malformed Authorization header bug
 # (REFERENCE_NOTES.md §4.5) is NOT replicated here.
+# Replaced python-jose with PyJWT to eliminate CVEs (PYSEC-2025-185, PYSEC-2026-1325).
 # See docs/COPIED_CODE.md for the full reuse log entry.
 
 from __future__ import annotations
@@ -11,7 +12,8 @@ import string
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List
 
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError as JWTError
 
 from app.core.config import settings
 
@@ -49,7 +51,7 @@ def create_refresh_token(payload: Dict[str, Any]) -> str:
 
 def decode_token(token: str) -> Dict[str, Any]:
     """
-    Decode and validate a JWT.  Raises JWTError on invalid / expired tokens.
+    Decode and validate a JWT. Raises JWTError on invalid / expired tokens.
     Callers should catch JWTError and return HTTP 401.
     """
     return jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
@@ -60,10 +62,10 @@ def decode_token(token: str) -> Dict[str, Any]:
 def assert_roles(token_payload: Dict[str, Any], required: List[str]) -> None:
     """
     Raise PermissionError if the token does not contain at least one of the
-    required roles.  See SPEC.md §2 for the full role list.
+    required roles.
     """
     user_roles: List[str] = token_payload.get("roles", [])
-    if not any(r in user_roles for r in required):
+    if not any(r in required for r in user_roles):
         raise PermissionError(
-            f"Required one of {required}, user has {user_roles}"
+            f"Access denied. Requires one of {required}, got {user_roles}"
         )
