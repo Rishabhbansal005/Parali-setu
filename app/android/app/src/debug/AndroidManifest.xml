@@ -1,0 +1,7 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Cleartext HTTP allowed STRICTLY for local debug development (e.g. 10.0.2.2 or 127.0.0.1) -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application
+        android:usesCleartextTraffic="true" />
+</manifest>
+
