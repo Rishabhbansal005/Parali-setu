@@ -87,7 +87,7 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 | Agronomic Estimation Formulas | **BUILT** | Stubble tonnage range and income estimates. Avoided emissions remain PLANNED placeholders. |
 
 | Live Seed Data on Supabase | **BUILT** | 37 users, 20 farms, 5 buyers, 6 machines, 5 trucks. |
-| Flutter Farmer Mobile App (Phase 1) | **PLANNED** | Vernacular UI, offline SQLite sync, booking flow. |
+| Flutter Farmer Mobile App (Phase 1) | **BUILT** | Vernacular UI (Hindi/Punjabi), offline mock repo fallback, live API client with 60s timeout, auto-retry, secure storage. |
 | Aggregator & Buyer Web Dashboards (Phase 2 & 3) | **PLANNED** | Next.js 14, interactive maps, live dispatch view. |
 | Vehicle Routing & Dispatch Engine | **PLANNED** | Google OR-Tools + OSRM distance matrix integration. |
 | Satellite Burn Verification Pipeline | **PLANNED** | Sentinel-2 / Google Earth Engine post-harvest verification. |
@@ -113,5 +113,48 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - **Test Harness Secret Isolation:** Added test-only cryptographic secret in `tests/conftest.py` so unit tests execute cleanly without needing local `.env` overrides or weakening production guards.
 
 ### 3. Verification Metrics
-- Pytest suite: 17 passed tests (100% pass rate) covering JWT secret guard in production mode, allow-listed demo OTP verification, non-allowlisted phone rejection, and live PostGIS geometry rollback tests.
+- Pytest suite: 18 passed tests (100% pass rate) covering JWT secret guard in production mode, allow-listed demo OTP verification, non-allowlisted phone rejection, and live PostGIS geometry rollback tests.
+
+---
+
+## Entry 4: Phase 1 Farmer Vernacular Mobile App (Flutter)
+
+- **Date:** 2026-10-08
+- **Branch:** `feat/app-v1`
+- **Milestone:** Phase 1 Farmer Vernacular Mobile Application
+- **Status:** **BUILT**
+
+### 1. What Was Built
+- **4-Screen Vernacular User Flow:**
+  - **Language Selection Screen (`LanguageChoiceScreen`):** Full bilingual support for Hindi (हिंदी) and Punjabi (ਪੰਜਾਬੀ). Large accessible cards, persisting locale state across app lifecycle.
+  - **Phone & OTP Login Screen (`PhoneLoginScreen`):** Phone validation, 6-digit OTP entry, debug-only `"123456"` hint via `kDebugMode` (never shown in release builds), and optional seeded farmer quick-login button (`--dart-define=DEMO_LOGIN=true`).
+  - **Field Details Screen (`FieldDetailsScreen`):** Prominent microphone button placeholder routing directly to intuitive touch inputs, 0.5-acre stepper, variety ChoiceChips (`PR-126`, `Pusa-44`, `Basmati`, `other`), harvest method selector (Combine Harvester / Manual), and harvest date picker.
+  - **Estimate Screen (`EstimateScreen`):** Displays stubble tonnage range (`low - high` and `~mid`), estimated income range (`₹ low - ₹ high` at ₹1,200/tonne), clear weighbridge measurement disclaimer, and next-step advisory cards.
+- **Vernacular Localization & Accessibility:**
+  - All UI strings centralized in `app/lib/l10n/app_strings.dart` with Hindi and Punjabi dictionaries.
+  - Per Rule 10, all Gurmukhi Punjabi strings are explicitly tagged with `/* NEEDS NATIVE REVIEW */` annotations for domain verification.
+  - Typography tuned for Devanagari and Gurmukhi script readability with minimum 56dp interactive touch targets and high-contrast agricultural palette.
+- **Resilient Network Client & Repositories (`farmer_repository.dart`):**
+  - **Cold-Start Resilience:** 60-second request timeout with friendly waking message ("सर्वर शुरू हो रहा है, कृपया प्रतीक्षा करें" / "ਸਰਵਰ ਸ਼ੁਰੂ ਹੋ ਰਿਹਾ ਹੈ, ਕਿਰਪਾ ਕਰਕੇ ਉਡੀਕ ਕਰੋ").
+  - **Auto-Retry & Offline Handling:** Automatic single-retry on transient 502/503/504 or network socket failures; clear offline banners when device has no internet connection.
+  - **Secure Token Persistence:** Implemented `FlutterSecureStorage` for encrypted JWT storage (no plaintext shared preferences).
+  - **Pluggable Architecture:** Automatic fallback to `MockFarmerRepository` when running without a backend or when `--dart-define=API_BASE_URL` is omitted, allowing smooth offline judging demos.
+- **Platform Configuration & Security:**
+  - Flutter default Android SDK versions maintained (`compileSdk = 35`, `minSdk = 21`, `targetSdk = 35`).
+  - Cleartext HTTP allowed **strictly** in `app/android/app/src/debug/AndroidManifest.xml` (`android:usesCleartextTraffic="true"`) for local testing. The release manifest (`app/android/app/src/main/AndroidManifest.xml`) strictly forbids cleartext traffic.
+
+### 2. Engineering Challenges & Lessons Learned
+- **Challenge 1: RenderFlex Overflow on Language Selection Screen:**
+  - *Symptom:* `A RenderFlex overflowed by 11 pixels on the right` during first launch on 360dp width physical device.
+  - *Root Cause:* The language title and subtitle `Column` inside the selection card `Row` expanded to its intrinsic content width without flex constraint.
+  - *Fix:* Wrapped the column in `Expanded(child: Column(...))`, allowing flexible text flow and preventing horizontal overflow.
+- **Challenge 3: Flutter 3.47 Color API Deprecations:**
+  - *Symptom:* Deprecation warnings when calling `.withOpacity()`.
+  - *Fix:* Modernized theme tokens in `theme.dart` to use `.withValues(alpha: ...)`.
+
+### 3. Verification Metrics
+- `flutter analyze`: **0 issues found** (clean lint).
+- `flutter test`: **5/5 unit & widget tests passed** (100% pass rate).
+- Physical Device Test: Deployed and tested live on physical Android device (`Realme RMX3780 / 5L4DS8BALB6XIJ9H`, Android 15 API 35) using Impeller Vulkan backend.
+- Release APK Build: Built production release bundle `build/app/outputs/flutter-apk/app-release.apk` (48.1 MB) successfully without debug flags or cleartext permissions.
 

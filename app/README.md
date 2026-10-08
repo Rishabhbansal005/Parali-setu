@@ -46,3 +46,56 @@ dependencies:
 > Read SPEC.md and docs/AGENT_RULES.md before writing any code.
 > Adapted patterns from Farmlink (Flutter) with owner permission.
 > See docs/COPIED_CODE.md for a full log of reused code.
+
+---
+
+## Building the APK
+
+### 1. Configure the API Base URL
+The backend base URL is injected at build time via `--dart-define`:
+```bash
+# Pointing to your deployed cloud backend:
+flutter build apk --dart-define=API_BASE_URL=https://your-deployed-backend-url.com
+
+# For local development with emulator:
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:8000
+
+# For local testing on a physical phone connected via USB:
+# First run: adb reverse tcp:8000 tcp:8000
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:8000
+```
+
+### 2. Build Commands
+- **Debug APK** (allows cleartext HTTP and includes demo mode OTP hints):
+  ```bash
+  flutter build apk --debug --dart-define=API_BASE_URL=https://your-deployed-backend-url.com
+  ```
+  Output path: `build/app/outputs/flutter-apk/app-debug.apk`
+
+- **Release APK** (optimized, shrunk, cleartext HTTP strictly blocked):
+  ```bash
+  flutter build apk --release --dart-define=API_BASE_URL=https://your-deployed-backend-url.com
+  ```
+  Output path: `build/app/outputs/flutter-apk/app-release.apk`
+
+---
+
+## Install the APK on an Android Phone
+
+When testing on a personal phone without a developer USB connection:
+
+1. **Transfer the APK to the Phone:**
+   - Copy `app-debug.apk` (or `app-release.apk`) to your phone via USB cable, Google Drive, WhatsApp, or email.
+2. **Enable "Install Unknown Apps":**
+   - Tap on the transferred `.apk` file to open it.
+   - If prompted: *"For your security, your phone is not allowed to install unknown apps from this source"*, tap **Settings**.
+   - Toggle **Allow from this source** to ON (for Chrome, Files, or WhatsApp), then tap the Back button.
+3. **Handle Google Play Protect Warning:**
+   - Because the APK is a self-signed development/hackathon build, Google Play Protect may show a dialog: *"Blocked by Play Protect - Unrecognized app details"*.
+   - Tap **More details** (small text below the warning).
+   - Tap **Install anyway**.
+   - Do NOT tap "OK" or "Don't install", as that cancels the installation.
+4. **Launch and Test:**
+   - Tap **Open** once installation completes.
+   - The app will connect directly to your public backend URL over cellular mobile data or Wi-Fi.
+
