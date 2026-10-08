@@ -158,3 +158,25 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - Physical Device Test: Deployed and tested live on physical Android device (`Realme RMX3780 / 5L4DS8BALB6XIJ9H`, Android 15 API 35) using Impeller Vulkan backend.
 - Release APK Build: Built production release bundle `build/app/outputs/flutter-apk/app-release.apk` (48.1 MB) successfully without debug flags or cleartext permissions.
 
+---
+
+## Entry 5: User Profile Management API & Long-Lived Farmer Sessions
+
+- **Date:** 2026-10-08
+- **Branch:** `feat/profile-api`
+- **Milestone:** User Profile API & Refresh Lifecycle
+- **Status:** **BUILT**
+
+### 1. What Was Built
+- **Enriched `GET /auth/me` Endpoint:** Returns full profile including `name`, `phone`, `phone_e164`, `role`, `roles`, `language`, `preferred_language`, `village`, `district`, and `state`.
+- **Owner-Only `PATCH /auth/me` Endpoint:** Allows authenticated farmers to update their name, language preference (`en`, `hi`, `pa`), village, and district. Strict input length validation (max 100 characters) and allowed language enumeration enforcement. Secured via FastAPI `Depends(get_current_user)` ensuring strict owner-only mutations.
+- **Configurable Token Lifetimes:**
+  - `ACCESS_TOKEN_EXPIRE_MINUTES`: Configured to 60 minutes.
+  - `REFRESH_TOKEN_EXPIRE_DAYS`: Configured to 30 days, specifically sized so farmers do not encounter repeated session expirations during the compact 10-15 day stubble harvest and clearing window.
+- **Token Refresh Verification:** Validated `POST /auth/token/refresh` with full roundtrip tests, confirming new access and refresh tokens are issued and malformed/access tokens are rejected with 401.
+- **Supabase Schema Verification:** Audited existing PostgreSQL schema from `0001_initial_schema.py`; verified that `users` already contains `name`, `phone_e164`, `preferred_language`, `roles`, `village`, `district`, and `state`. No Alembic migration needed.
+
+### 2. Verification Metrics
+- Pytest suite: **21 passed tests** (100% pass rate) covering profile retrieval, profile updates, language validation, unauthorized update rejection, and token refresh lifecycle.
+
+

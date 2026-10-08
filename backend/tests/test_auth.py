@@ -195,3 +195,105 @@ def test_wrong_otp_lockout_and_demo_mode_cannot_bypass_lockout(client, monkeypat
 def test_protected_route_without_token(client):
     resp = client.get("/auth/me")
     assert resp.status_code == 403 or resp.status_code == 401
+
+
+def test_get_and_patch_profile(client):
+    phone = "+919876547777"
+    client.post("/auth/otp/send", json={"phone_e164": phone})
+    otp = _MOCK_OTP_STORE[phone].otp
+    auth_resp = client.post("/auth/otp/verify", json={"phone_e164": phone, "otp": otp})
+    assert auth_resp.status_code == 200
+    token = auth_resp.json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. GET /auth/me returns name, phone, role, language, village, district
+    get_resp = client.get("/auth/me", headers=headers)
+    assert get_resp.status_code == 200
+    data = get_resp.json()
+    assert data["phone"] == phone
+    assert data["phone_e164"] == phone
+    assert data["role"] == "farmer"
+    assert data["roles"] == ["farmer"]
+    assert data["language"] in ("en", "hi", "pa")
+    assert data["name"] is not None
+
+    # 2. PATCH /auth/me with Punjabi language and village/district
+    patch_resp = client.patch(
+        "/auth/me",
+        headers=headers,
+        json={
+            "name": "Gurpreet Singh",
+            "language": "pa",
+            "village": "Kot Buddha",
+            "district": "Tarn Taran",
+        },
+    )
+    assert patch_resp.status_code == 200
+    updated = patch_resp.json()
+    assert updated["name"] == "Gurpreet Singh"
+    assert updated["language"] == "pa"
+    assert updated["preferred_language"] == "pa"
+    assert updated["village"] == "Kot Buddha"
+    assert updated["district"] == "Tarn Taran"
+
+    # 3. GET /auth/me verifies persistence
+    verify_get = client.get("/auth/me", headers=headers)
+    assert verify_get.status_code == 200
+    assert verify_get.json()["name"] == "Gurpreet Singh"
+    assert verify_get.json()["language"] == "pa"
+    assert verify_get.json()["village"] == "Kot Buddha"
+
+    # 4. PATCH with English and Hindi works
+    patch_en = client.patch("/auth/me", headers=headers, json={"language": "en"})
+    assert patch_en.status_code == 200
+    assert patch_en.json()["language"] == "en"
+
+    patch_hi = client.patch("/auth/me", headers=headers, json={"language": "hi"})
+    assert patch_hi.status_code == 200
+    assert patch_hi.json()["language"] == "hi"
+
+    # 5. Invalid language rejected with 400
+    invalid_lang = client.patch("/auth/me", headers=headers, json={"language": "fr"})
+    assert invalid_lang.status_code == 400
+    assert "Invalid language" in invalid_lang.json()["detail"]
+
+    # 6. Name exceeding 100 characters rejected with 400 or 422
+    long_name = client.patch("/auth/me", headers=headers, json={"name": "A" * 105})
+    assert long_name.status_code in (400, 422)
+
+
+def test_patch_profile_unauthorized(client):
+    """Only the authenticated owner can update their profile."""
+    resp = client.patch("/auth/me", json={"name": "Unauthorized Haxor"})
+    assert resp.status_code in (401, 403)
+
+
+def test_token_refresh_lifecycle(client):
+    phone = "+919876548888"
+    client.post("/auth/otp/send", json={"phone_e164": phone})
+    otp = _MOCK_OTP_STORE[phone].otp
+    auth_resp = client.post("/auth/otp/verify", json={"phone_e164": phone, "otp": otp})
+    assert auth_resp.status_code == 200
+    tokens = auth_resp.json()
+
+    # 1. Successful refresh
+    refresh_resp = client.post("/auth/token/refresh", json={"refresh_token": tokens["refresh_token"]})
+    assert refresh_resp.status_code == 200
+    new_tokens = refresh_resp.json()
+    assert "access_token" in new_tokens
+    assert "refresh_token" in new_tokens
+
+    # 2. Access /auth/me with newly minted access token
+    headers = {"Authorization": f"Bearer {new_tokens['access_token']}"}
+    me_resp = client.get("/auth/me", headers=headers)
+    assert me_resp.status_code == 200
+    assert me_resp.json()["phone"] == phone
+
+    # 3. Invalid token rejected
+    bad_resp = client.post("/auth/token/refresh", json={"refresh_token": "malformed.jwt.token"})
+    assert bad_resp.status_code == 401
+
+    # 4. Access token passed as refresh token rejected
+    wrong_type = client.post("/auth/token/refresh", json={"refresh_token": tokens["access_token"]})
+    assert wrong_type.status_code == 401
+
