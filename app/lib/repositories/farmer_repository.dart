@@ -8,6 +8,7 @@ import '../constants.dart';
 import '../models/farm.dart';
 import '../models/estimate_result.dart';
 import '../models/user_profile.dart';
+import '../models/matched_bundle.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -58,6 +59,14 @@ abstract class FarmerRepository {
     required String farmId,
     required String harvestDate,
     double pricePerTonne = AppConstants.assumedPricePerTonneInr,
+    Function(String)? onStatusUpdate,
+  });
+  Future<List<MatchedBundle>> getMatchedBundles({
+    String? estimateId,
+    double acres = 4.0,
+    String variety = 'PR-126',
+    DateTime? harvestDate,
+    double? stubbleTonnes,
     Function(String)? onStatusUpdate,
   });
 }
@@ -409,6 +418,49 @@ class ApiFarmerRepository implements FarmerRepository {
       },
     );
   }
+
+  @override
+  Future<List<MatchedBundle>> getMatchedBundles({
+    String? estimateId,
+    double acres = 4.0,
+    String variety = 'PR-126',
+    DateTime? harvestDate,
+    double? stubbleTonnes,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/matching/find-bundles');
+        final response = await _client.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'estimate_id': estimateId,
+            'acres': acres,
+            'paddy_variety': variety,
+            'harvest_date': (harvestDate ?? DateTime.now().add(const Duration(days: 2))).toIso8601String().substring(0, 10),
+            'stubble_tonnes': stubbleTonnes ?? (acres * 2.0),
+            'latitude': 30.25,
+            'longitude': 75.85,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final rawList = data['bundles'] as List<dynamic>? ?? [];
+          return rawList.map((e) => MatchedBundle.fromJson(e as Map<String, dynamic>)).toList();
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to match bundles');
+        }
+      },
+    );
+  }
 }
 
 class MockFarmerRepository implements FarmerRepository {
@@ -537,6 +589,97 @@ class MockFarmerRepository implements FarmerRepository {
       incomeLowInr: 6.40 * pricePerTonne,
       incomeHighInr: 9.60 * pricePerTonne,
     );
+  }
+
+  @override
+  Future<List<MatchedBundle>> getMatchedBundles({
+    String? estimateId,
+    double acres = 4.0,
+    String variety = 'PR-126',
+    DateTime? harvestDate,
+    double? stubbleTonnes,
+    Function(String)? onStatusUpdate,
+  }) async {
+    final effectiveStubble = stubbleTonnes ?? (acres * 2.0);
+    final targetHarvest = harvestDate ?? DateTime.now().add(const Duration(days: 2));
+
+    return [
+      MatchedBundle(
+        offerId: 'off-1111-2222-3333-444455556666',
+        rank: 1,
+        tag: 'BEST_VALUE',
+        tagLabelEn: 'Best Net Payout',
+        tagLabelHi: 'सबसे ज्यादा मुनाफा',
+        tagLabelPa: 'ਸਭ ਤੋਂ ਵੱਧ ਮੁਨਾਫਾ /* NEEDS NATIVE REVIEW */',
+        proposedPickupDate: targetHarvest.add(const Duration(days: 2)),
+        daysAfterHarvest: 2,
+        machineName: 'Gurdeep Singh Agro Balers',
+        machineType: 'Claas Square Baler (CHC Sangrur)',
+        machineCostInr: acres * 1200.0,
+        truckName: 'Sharma Transport Logistics',
+        truckCapacityTonnes: 12.0,
+        transportCostInr: 540.0,
+        buyerName: 'Verbio India Bio-CNG Plant (Lehra Gaga)',
+        buyerType: 'Bio-CNG Refinery',
+        buyerDistanceKm: 18.5,
+        buyerPricePerTonneInr: 1350.0,
+        stubbleTonnes: effectiveStubble,
+        grossIncomeInr: effectiveStubble * 1350.0,
+        netIncomeInr: (effectiveStubble * 1350.0) - (acres * 1200.0) - 540.0,
+        co2SavedTonnes: effectiveStubble * 1.5,
+        pm25AvoidedKg: effectiveStubble * 18.0,
+      ),
+      MatchedBundle(
+        offerId: 'off-2222-3333-4444-555566667777',
+        rank: 2,
+        tag: 'FASTEST',
+        tagLabelEn: 'Fastest 24h Pickup',
+        tagLabelHi: 'सबसे तेज 24 घंटे में उठान',
+        tagLabelPa: 'ਸਭ ਤੋਂ ਤੇਜ਼ 24 ਘੰਟੇ ਚੁਕਾਈ /* NEEDS NATIVE REVIEW */',
+        proposedPickupDate: targetHarvest.add(const Duration(days: 1)),
+        daysAfterHarvest: 1,
+        machineName: 'Kisan Sahayata CHC Nabha',
+        machineType: 'New Holland Round Baler',
+        machineCostInr: acres * 1350.0,
+        truckName: 'Punjab Kisan Express (Tata 1613)',
+        truckCapacityTonnes: 16.0,
+        transportCostInr: 680.0,
+        buyerName: 'Sukhbir Agro Bio-Pellets (Sunam)',
+        buyerType: 'Biomass Pellet Mill',
+        buyerDistanceKm: 14.2,
+        buyerPricePerTonneInr: 1250.0,
+        stubbleTonnes: effectiveStubble,
+        grossIncomeInr: effectiveStubble * 1250.0,
+        netIncomeInr: (effectiveStubble * 1250.0) - (acres * 1350.0) - 680.0,
+        co2SavedTonnes: effectiveStubble * 1.5,
+        pm25AvoidedKg: effectiveStubble * 18.0,
+      ),
+      MatchedBundle(
+        offerId: 'off-3333-4444-5555-666677778888',
+        rank: 3,
+        tag: 'LOCAL_GREEN',
+        tagLabelEn: 'Local Clean Energy Plant',
+        tagLabelHi: 'स्थानीय स्वच्छ ऊर्जा प्लांट',
+        tagLabelPa: 'ਸਥਾਨਕ ਸਾਫ਼ ਊਰਜਾ ਪਲਾਂਟ /* NEEDS NATIVE REVIEW */',
+        proposedPickupDate: targetHarvest.add(const Duration(days: 3)),
+        daysAfterHarvest: 3,
+        machineName: 'Malwa Precision Balers',
+        machineType: 'Sonalika Stubble Packer',
+        machineCostInr: acres * 1100.0,
+        truckName: 'Dhillon Heavy Transport',
+        truckCapacityTonnes: 10.0,
+        transportCostInr: 820.0,
+        buyerName: 'Shree Ganesh Paper & Pulp Board',
+        buyerType: 'Paper Mill',
+        buyerDistanceKm: 26.0,
+        buyerPricePerTonneInr: 1180.0,
+        stubbleTonnes: effectiveStubble,
+        grossIncomeInr: effectiveStubble * 1180.0,
+        netIncomeInr: (effectiveStubble * 1180.0) - (acres * 1100.0) - 820.0,
+        co2SavedTonnes: effectiveStubble * 1.5,
+        pm25AvoidedKg: effectiveStubble * 18.0,
+      ),
+    ];
   }
 }
 

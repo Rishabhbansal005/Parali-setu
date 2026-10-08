@@ -4,7 +4,9 @@ import 'package:intl/intl.dart';
 import '../constants.dart';
 import '../l10n/app_strings.dart';
 import '../models/estimate_result.dart';
+import '../repositories/farmer_repository.dart';
 import '../theme.dart';
+import 'options_screen.dart';
 
 class EstimateScreen extends StatelessWidget {
   final AppLanguage language;
@@ -12,6 +14,7 @@ class EstimateScreen extends StatelessWidget {
   final double acres;
   final String variety;
   final String harvestMethod;
+  final FarmerRepository? repository;
 
   const EstimateScreen({
     super.key,
@@ -20,7 +23,9 @@ class EstimateScreen extends StatelessWidget {
     required this.acres,
     required this.variety,
     required this.harvestMethod,
+    this.repository,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -224,7 +229,52 @@ class EstimateScreen extends StatelessWidget {
 
               const SizedBox(height: 28),
 
-              // 5. Recalculate button (56dp min height)
+              // 5. Match Bundles CTA (Primary action)
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGreen,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () {
+                    final repo = repository ?? RepositoryProvider.getRepository();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => OptionsScreen(
+                          acres: acres,
+                          variety: variety,
+                          harvestDate: DateTime.now().add(const Duration(days: 2)),
+                          stubbleTonnes: estimate.stubbleTonnesMid,
+                          estimateId: estimate.id,
+                          language: language,
+                          repository: repo,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        strings.selectBundleTitle,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward, size: 20),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // 6. Recalculate button (56dp min height)
               SizedBox(
                 height: 56,
                 width: double.infinity,
@@ -234,6 +284,7 @@ class EstimateScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
+
             ],
           ),
         ),

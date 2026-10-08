@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.api import auth, farmers, estimates
+from app.api import auth, farmers, estimates, matching
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(farmers.router)
 app.include_router(estimates.router)
+app.include_router(matching.router)
 
 @app.get("/health", tags=["system"])
 def health_check():

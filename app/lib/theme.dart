@@ -132,3 +132,13 @@ class AppTheme {
     );
   }
 }
+
+class AppColors {
+  static const Color primary = AppTheme.primaryGreen;
+  static const Color primaryDark = Color(0xFF0E3D12);
+  static const Color primaryLight = Color(0xFFE8F5E9);
+  static const Color textDark = AppTheme.textDark;
+  static const Color textMuted = AppTheme.textMuted;
+  static const Color gold = AppTheme.wheatGold;
+}
+

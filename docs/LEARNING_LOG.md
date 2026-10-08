@@ -237,5 +237,45 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
   - `app-armeabi-v7a-release.apk`: **14.47 MB**
   - `app-x86_64-release.apk`: **18.45 MB**
 
+---
+
+## Entry 5: Core Matching Engine & Options Screen (Google OR-Tools CP-SAT)
+
+- **Date:** 2026-10-08
+- **Branch:** `feat/matching-engine`
+- **Goal:** Implement multi-stakeholder constraint optimization matching farmer harvest windows to nearby baler machines, transport trucks, and biomass buyers, and present 2–3 ranked options to the farmer on mobile.
+
+### 1. What Was Built
+- **Backend Matching Service (`backend/app/services/matching.py`):**
+  - Integrated `ortools.sat.python.cp_model` (Google OR-Tools CP-SAT solver).
+  - Implemented Haversine great-circle distance algorithm for geo-spatial filtering.
+  - Formulated constraint optimization model:
+    - Distance bounds (balers $\le 45\text{ km}$, buyers $\le 85\text{ km}$).
+    - Time-window feasibility ($t_{pickup} \ge \text{harvest\_date}$).
+    - Financial objective maximizing net earnings ($\text{gross} - \text{baler\_cost} - \text{transport\_cost}$).
+    - Environmental emission calculation: Avoided $1.5\text{ tonnes } CO_2$ and $18.0\text{ kg } PM_{2.5}$ per tonne diverted (CEEW / NEERI factors).
+  - Returns 3 ranked bundle profiles:
+    1. *Best Value* (Maximum net in-hand payout).
+    2. *Fastest Pickup* (Earliest pickup within 24–48 hours).
+    3. *Local Green Energy* (Prioritizing Bio-CNG refineries).
+- **Matching API Endpoints (`backend/app/api/matching.py`):**
+  - `POST /matching/find-bundles`: Solves CP-SAT optimization; persists `Offer` records in Supabase PostGIS when `estimate_id` is passed.
+  - `GET /matching/estimate/{estimate_id}/bundles`: Convenience query for existing field estimates.
+  - Configured optional bearer token dependency so exploratory requests work without prior login friction.
+- **Flutter Options Screen (`app/lib/screens/options_screen.dart`):**
+  - Top field summary banner displaying acres, crop variety, and estimated recoverable biomass tonnage.
+  - 3 ranked bundle cards with color-coded chips, partner identity breakdown (Baler CHC, Truck Logistics, Factory Buyer), pickup schedule, transparent net in-hand calculation, and environmental impact pill.
+  - 56dp primary CTA button with interactive modal bottom sheet displaying booking confirmation and simulated factory escrow lock notice.
+- **Repository & Navigation Wiring:**
+  - Added `getMatchedBundles` to `FarmerRepository`, `ApiFarmerRepository`, and `MockFarmerRepository`.
+  - Added primary "Choose Stubble Pickup Bundle" navigation button in `EstimateScreen`.
+  - Added trilingual localization keys in English, Hindi, and Punjabi (`AppStrings`).
+
+### 2. Verification Metrics
+- `pytest`: **24/24 tests passed** (including `test_haversine_distance`, `test_matching_engine_solver`, and `test_matching_api_endpoint`).
+- `flutter analyze`: **0 issues found** (100% clean lint).
+- `flutter test`: **10/10 unit & widget tests passed** (including `test/options_screen_test.dart`).
+
+
 
 

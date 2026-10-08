@@ -345,8 +345,33 @@ class AppStrings {
           ? 'अमेज़न एनवायर्नमेंटल हैक्स 2026 के लिए निर्मित प्रोटोटाइप। इस डेमो में सभी डेटा सिम्युलेटेड हैं।'
           : 'ਐਮਾਜ਼ਾਨ ਐਨਵਾਇਰਨਮੈਂਟਲ ਹੈਕਸ 2026 ਲਈ ਬਣਾਇਆ ਪ੍ਰੋਟੋਟਾਈਪ। ਇਸ ਡੈਮੋ ਵਿੱਚ ਸਾਰਾ ਡਾਟਾ ਸਿਮੂਲੇਟਿਡ ਹੈ। /* NEEDS NATIVE REVIEW */');
 
+  // ── Matching & Options Screen ─────────────────────────────────────────────
+  String get selectBundleTitle => isEnglish
+      ? 'Choose Stubble Pickup Bundle'
+      : (isHindi ? 'पराली उठान विकल्प चुनें' : 'ਪਰਾਲੀ ਚੁਕਾਈ ਵਿਕਲਪ ਚੁਣੋ /* NEEDS NATIVE REVIEW */');
+  String get bundlesSubtitle => isEnglish
+      ? 'Optimized by AI for fastest pickup and maximum payout'
+      : (isHindi ? 'AI द्वारा सबसे तेज उठान और सबसे ज्यादा मुनाफे के लिए तैयार' : 'ਏ.ਆਈ. ਦੁਆਰਾ ਸਭ ਤੋਂ ਤੇਜ਼ ਚੁਕਾਈ ਅਤੇ ਵੱਧ ਮੁਨਾਫੇ ਲਈ ਤਿਆਰ /* NEEDS NATIVE REVIEW */');
+  String get bookPickupBtn => isEnglish
+      ? 'Book This Pickup'
+      : (isHindi ? 'यह विकल्प बुक करें' : 'ਇਹ ਵਿਕਲਪ ਬੁੱਕ ਕਰੋ /* NEEDS NATIVE REVIEW */');
+  String get grossIncomeLabel => isEnglish ? 'Factory Rate' : (isHindi ? 'फैक्ट्री का मूल्य' : 'ਫੈਕਟਰੀ ਮੁੱਲ /* NEEDS NATIVE REVIEW */');
+  String get machineCostLabel => isEnglish ? 'Baler Machine' : (isHindi ? 'बेलर मशीन खर्च' : 'ਬੇਲਰ ਮਸ਼ੀਨ ਖਰਚ /* NEEDS NATIVE REVIEW */');
+  String get transportCostLabel => isEnglish ? 'Truck Transport' : (isHindi ? 'ट्रक ढुलाई' : 'ਟਰੱਕ ਢੁਲਾਈ /* NEEDS NATIVE REVIEW */');
+  String get netEarningsLabel => isEnglish ? 'Net In-Hand Earnings' : (isHindi ? 'हाथ में शुद्ध कमाई' : 'ਹੱਥ ਵਿੱਚ ਸ਼ੁੱਧ ਕਮਾਈ /* NEEDS NATIVE REVIEW */');
+  String get pickupDateLabel => isEnglish ? 'Pickup Date' : (isHindi ? 'उठान की तारीख' : 'ਚੁਕਾਈ ਦੀ ਮਿਤੀ /* NEEDS NATIVE REVIEW */');
+  String get buyerLabel => isEnglish ? 'Delivery To' : (isHindi ? 'कहाँ जाएगा' : 'ਕਿੱਥੇ ਜਾਵੇਗਾ /* NEEDS NATIVE REVIEW */');
+  String get bookingConfirmedTitle => isEnglish ? 'Booking Confirmed!' : (isHindi ? 'बुकिंग पक्की हो गई!' : 'ਬੁਕਿੰਗ ਪੱਕੀ ਹੋ ਗਈ! /* NEEDS NATIVE REVIEW */');
+  String get escrowHoldNotice => isEnglish
+      ? 'Simulated Escrow: ₹{amount} locked by factory. Released on weighbridge receipt.'
+      : (isHindi
+          ? 'सुरक्षित एस्क्रो: ₹{amount} फैक्ट्री द्वारा लॉक किया गया। धर्मकांटा रसीद पर रिलीज होगा।'
+          : 'ਸੁਰੱਖਿਅਤ ਐਸਕਰੋ: ₹{amount} ਫੈਕਟਰੀ ਦੁਆਰਾ ਲਾਕ। ਧਰਮਕੰਡਾ ਪਰਚੀ ਤੇ ਮਿਲੇਗਾ। /* NEEDS NATIVE REVIEW */');
+  String get viewBookingDetails => isEnglish ? 'Go to Home' : (isHindi ? 'मुख्य पृष्ठ पर जाएं' : 'ਮੁੱਖ ਪੰਨੇ ਤੇ ਜਾਓ /* NEEDS NATIVE REVIEW */');
+
   // ── General Errors & Network ──────────────────────────────────────────────
   String get serverWakingUp => isEnglish
+
       ? 'Server is waking up, please wait... (may take 30-60 seconds on free tier)'
       : (isHindi
           ? 'सर्वर शुरू हो रहा है, कृपया थोड़ा इंतज़ार करें... (30-60 सेकंड लग सकते हैं)'
