@@ -35,7 +35,7 @@ We do NOT treat all users the same. Parali management involves 6 distinct stakeh
 | Stakeholder | Primary Interface | Core Pain Point | Tailored Solution in ParaliSetu |
 | :--- | :--- | :--- | :--- |
 | **1. Marginal Farmer (Kisaan)** | **Flutter Mobile App (The Hero)** | 15-day deadline before wheat sowing; low digital literacy; ₹5,000–₹15,000 fine fear; commercial balers refuse small 2–4 acre fields. | **Voice-first intake** in Punjabi/Hindi; automatic clustering with neighboring farms; guaranteed cash via Dharamkanta weighbridge slip; No-Burn certificate. |
-| **2. Kisan Mitra (Village Agent)** | **Role Mode in Flutter App** | Elderly or illiterate farmers in the village cannot use smartphones alone. | In-app toggle (`role: kisan_mitra`) allowing youth/agents to register and manage bookings for multiple farmers in their village. |
+| **2. Kisan Mitra (Village Agent)** | **Role Mode in Flutter App (DEFERRED TO LAST)** | Elderly or illiterate farmers in the village cannot use smartphones alone. | *(Stretch Goal / Built Last)* In-app toggle (`role: kisan_mitra`) for village youth. Primary focus remains on the direct farmer journey first. |
 | **3. Biomass Buyer (Bio-CNG / Pellet Plants)** | **Next.js Web Portal (Desktop & Mobile)** | Unpredictable daily straw supply; boilers shutdown if moisture or deliveries stop; dealing with hundreds of individual farmers is chaotic. | Web dashboard to set daily demand (e.g. 200 tonnes/day) and purchase price (₹/tonne); simulated escrow deposit guarantees supply. |
 | **4. Baler & Truck Owners (Aggregators)** | **Next.js Web Portal + SMS/WhatsApp** | Cannot afford deadhead travel for small 2-acre fields; need high equipment utilization during the 20-day peak. | OR-Tools groups neighboring small farms into **25–40 acre contiguous clusters**, giving operators maximum throughput per fuel litre. |
 | **5. Dharamkanta (Weighbridge Operator)** | **Next.js Web Portal (Mobile Browser)** | Long truck queues; manual paper receipts prone to fraud and disputes between farmer and factory. | Fast mobile browser form: enter Gross & Tare weight, snap slip photo with automatic OCR sanity validation. |
@@ -56,6 +56,8 @@ To ensure AI provides real value and is not just a hackathon gimmick, we adhere 
 * **Photo-based Moisture Estimation:** **SKIP.** (Phone cameras cannot measure internal bale moisture accurately; lack of verified training data; high risk of disputes).
 * **NDVI Satellite Harvest Prediction:** **DEFER TO LATER.** (Farmers already know their exact harvest date; satellite time-series adds high complexity without immediate farmer utility).
 * **3 Separate Mobile Apps:** **REJECTED.** (Building 3 native apps dilutes quality. 1 high-polish Flutter app for farmers + 1 responsive Next.js web portal for buyers/operators is the industry-standard architecture).
+* **Kisan Mitra (Multi-Farmer Agent Mode):** **DEFERRED TO LAST (P3 / Stretch Goal).** (User priority directive: Focus 100% on the single farmer direct Golden Path first; multi-farmer agent toggle will only be tackled if time permits at the very end).
+
 
 
 ---
@@ -170,7 +172,7 @@ We strictly avoid the 3-native-apps trap. The architecture is cleanly divided:
 │     Farmer Mobile App (Flutter) │       │   Operations Web Portal (Next)  │
 │  • Punjabi / Hindi / English    │       │  • Factory Buyers (Set Demand)  │
 │  • Voice Intake & Bundle Picker │       │  • Weighbridge Ticket Entry     │
-│  • Kisan Mitra toggle mode      │       │  • KVK Subsidy & Hotspot Map    │
+│  • Kisan Mitra (built last)     │       │  • KVK Subsidy & Hotspot Map    │
 └────────────────┬────────────────┘       └────────────────┬────────────────┘
                  │                                         │
                  └───────────────────┬─────────────────────┘
