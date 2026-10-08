@@ -47,10 +47,43 @@ def test_otp_send_and_verify_cycle(client):
     assert "access_token" in new_tokens
 
 
+def test_jwt_secret_guard_refuses_placeholder_in_production(monkeypatch):
+    """When DEBUG=False, app/Settings must refuse to start if JWT_SECRET_KEY is empty or placeholder."""
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is missing or still set to a default placeholder"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT")
+
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is missing or still set to a default placeholder"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="your-super-secret-jwt-key-change-in-production")
+
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is missing or still set to a default placeholder"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="")
+
+
+def test_jwt_secret_guard_refuses_short_secret_in_production(monkeypatch):
+    """When DEBUG=False, app/Settings must refuse to start if JWT_SECRET_KEY is shorter than 32 characters."""
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is shorter than 32 characters"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="too-short-key-under-32-chars")
+
+
+def test_jwt_secret_guard_allows_valid_secret_in_production():
+    """When DEBUG=False, a strong non-placeholder secret of at least 32 characters must start normally."""
+    s = Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="a-very-strong-32-byte-secret-key-for-prod")
+    assert s.JWT_SECRET_KEY == "a-very-strong-32-byte-secret-key-for-prod"
+
+
+def test_jwt_secret_guard_allows_placeholder_when_debug_is_true():
+    """When DEBUG=True, placeholder is allowed for local developer ease."""
+    s = Settings(_env_file=None, DEBUG=True, JWT_SECRET_KEY="CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT")
+    assert s.JWT_SECRET_KEY == "CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT"
+
+
 def test_demo_mode_false_rejects_universal_otp(client, monkeypatch):
-    """When DEMO_MODE is False (default), 123456 must be rejected."""
+    """When DEMO_MODE is False (default), 123456 must be rejected for all numbers, even if in DEMO_PHONES."""
     monkeypatch.setattr(settings, "DEMO_MODE", False)
-    phone = "+919876541111"
+    monkeypatch.setattr(settings, "DEMO_PHONES", "+919810000001,+919810000002")
+    phone = "+919810000001"
 
     # Case A: No OTP requested
     resp_no_req = client.post("/auth/otp/verify", json={"phone_e164": phone, "otp": "123456"})
@@ -66,17 +99,30 @@ def test_demo_mode_false_rejects_universal_otp(client, monkeypatch):
     assert "Incorrect OTP" in resp_mismatch.json()["detail"]
 
 
-def test_demo_mode_true_allows_universal_otp(client, monkeypatch):
-    """When DEMO_MODE is True, 123456 is accepted as universal bypass."""
+def test_demo_mode_true_with_allow_list(client, monkeypatch):
+    """When DEMO_MODE is True, 123456 is accepted ONLY for phone numbers in DEMO_PHONES."""
     monkeypatch.setattr(settings, "DEMO_MODE", True)
-    phone = "+919876542222"
+    monkeypatch.setattr(settings, "DEMO_PHONES", "+919810000001,+919810000002")
 
-    client.post("/auth/otp/send", json={"phone_e164": phone})
-    _MOCK_OTP_STORE[phone].otp = "999888"
+    demo_phone = "+919810000001"
+    non_demo_phone = "+919810000099"
 
-    verify_resp = client.post("/auth/otp/verify", json={"phone_e164": phone, "otp": "123456"})
+    # 1. Allow-listed demo phone with 123456 is accepted
+    verify_resp = client.post("/auth/otp/verify", json={"phone_e164": demo_phone, "otp": "123456"})
     assert verify_resp.status_code == 200
     assert "access_token" in verify_resp.json()
+
+    # 2. Non-demo phone without prior send: rejected
+    resp_no_req = client.post("/auth/otp/verify", json={"phone_e164": non_demo_phone, "otp": "123456"})
+    assert resp_no_req.status_code == 400
+
+    # 3. Non-demo phone with OTP sent: 123456 is rejected if it doesn't match generated OTP
+    client.post("/auth/otp/send", json={"phone_e164": non_demo_phone})
+    _MOCK_OTP_STORE[non_demo_phone].otp = "777888"
+    resp_other = client.post("/auth/otp/verify", json={"phone_e164": non_demo_phone, "otp": "123456"})
+    assert resp_other.status_code == 400
+    assert "Incorrect OTP" in resp_other.json()["detail"]
+
 
 
 def test_verify_wrong_otp(client):
