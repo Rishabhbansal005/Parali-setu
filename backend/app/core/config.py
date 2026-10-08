@@ -88,11 +88,13 @@ class Settings(BaseSettings):
             placeholders = {
                 "",
                 "CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT",
+                "your-super-secret-jwt-key-change-in-production",
                 "CHANGE_ME_BEFORE_COMMIT",
                 "changeme",
                 "secret",
             }
-            if not self.JWT_SECRET_KEY or self.JWT_SECRET_KEY.strip() in placeholders:
+            key = (self.JWT_SECRET_KEY or "").strip()
+            if not key or key in placeholders:
                 raise ValueError(
                     "Production configuration error: JWT_SECRET_KEY is missing or still set to a default placeholder "
                     "while running in production mode (DEBUG=False).\n"
@@ -100,6 +102,14 @@ class Settings(BaseSettings):
                     "1. On Render / production: Generate a strong random key (e.g. run 'openssl rand -hex 32') and "
                     "set it as the JWT_SECRET_KEY environment variable in your dashboard settings.\n"
                     "2. For local development only: Set DEBUG=true or specify JWT_SECRET_KEY in your backend/.env file."
+                )
+            if len(key) < 32:
+                raise ValueError(
+                    f"Production configuration error: JWT_SECRET_KEY is shorter than 32 characters (got {len(key)}) "
+                    "while running in production mode (DEBUG=False).\n"
+                    "How to fix this:\n"
+                    "Generate a strong 256-bit key (e.g. run 'openssl rand -hex 32') and set it as the "
+                    "JWT_SECRET_KEY environment variable."
                 )
         return self
 

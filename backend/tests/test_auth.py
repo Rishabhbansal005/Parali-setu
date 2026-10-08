@@ -54,11 +54,21 @@ def test_jwt_secret_guard_refuses_placeholder_in_production(monkeypatch):
         Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT")
 
     with pytest.raises(ValueError, match="JWT_SECRET_KEY is missing or still set to a default placeholder"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="your-super-secret-jwt-key-change-in-production")
+
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is missing or still set to a default placeholder"):
         Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="")
 
 
+def test_jwt_secret_guard_refuses_short_secret_in_production(monkeypatch):
+    """When DEBUG=False, app/Settings must refuse to start if JWT_SECRET_KEY is shorter than 32 characters."""
+    monkeypatch.delenv("JWT_SECRET_KEY", raising=False)
+    with pytest.raises(ValueError, match="JWT_SECRET_KEY is shorter than 32 characters"):
+        Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="too-short-key-under-32-chars")
+
+
 def test_jwt_secret_guard_allows_valid_secret_in_production():
-    """When DEBUG=False, a strong non-placeholder secret must start normally."""
+    """When DEBUG=False, a strong non-placeholder secret of at least 32 characters must start normally."""
     s = Settings(_env_file=None, DEBUG=False, JWT_SECRET_KEY="a-very-strong-32-byte-secret-key-for-prod")
     assert s.JWT_SECRET_KEY == "a-very-strong-32-byte-secret-key-for-prod"
 
