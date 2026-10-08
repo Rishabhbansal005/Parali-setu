@@ -25,9 +25,20 @@ class RefreshTokenRequest(BaseModel):
 class UserProfileResponse(BaseModel):
     id: str
     phone_e164: str
+    phone: Optional[str] = None
     name: Optional[str] = None
     preferred_language: str
-    roles: List[str]
+    language: Optional[str] = None
+    roles: List[str] = Field(default_factory=list)
+    role: Optional[str] = None
     village: Optional[str] = None
     district: Optional[str] = None
-    state: str
+    state: Optional[str] = None
+
+
+class UpdateProfileRequest(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    language: Optional[str] = None
+    village: Optional[str] = Field(None, max_length=100)
+    district: Optional[str] = Field(None, max_length=100)
+    state: Optional[str] = Field(None, max_length=100)

@@ -25,6 +25,7 @@ from app.schemas.auth import (
     TokenResponse,
     RefreshTokenRequest,
     UserProfileResponse,
+    UpdateProfileRequest,
 )
 from app.services.otp_provider import get_otp_provider
 
@@ -225,10 +226,83 @@ def get_current_user_profile(user: User = Depends(get_current_user)):
     return UserProfileResponse(
         id=str(user.id),
         phone_e164=user.phone_e164,
+        phone=user.phone_e164,
         name=user.name,
         preferred_language=user.preferred_language,
-        roles=user.roles,
+        language=user.preferred_language,
+        roles=user.roles or [],
+        role=user.roles[0] if user.roles else "farmer",
         village=user.village,
         district=user.district,
         state=user.state,
     )
+
+
+@router.patch("/me", response_model=UserProfileResponse)
+def update_current_user_profile(
+    req: UpdateProfileRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if req.name is not None:
+        clean_name = req.name.strip()
+        if len(clean_name) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Name cannot exceed 100 characters",
+            )
+        user.name = clean_name or None
+
+    if req.language is not None:
+        clean_lang = req.language.strip().lower()
+        if clean_lang not in ("en", "hi", "pa"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid language. Allowed values are: 'en', 'hi', 'pa'",
+            )
+        user.preferred_language = clean_lang
+
+    if req.village is not None:
+        clean_vil = req.village.strip()
+        if len(clean_vil) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Village cannot exceed 100 characters",
+            )
+        user.village = clean_vil or None
+
+    if req.district is not None:
+        clean_dist = req.district.strip()
+        if len(clean_dist) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="District cannot exceed 100 characters",
+            )
+        user.district = clean_dist or None
+
+    if req.state is not None:
+        clean_state = req.state.strip()
+        if len(clean_state) > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="State cannot exceed 100 characters",
+            )
+        user.state = clean_state or "Punjab"
+
+    db.commit()
+    db.refresh(user)
+
+    return UserProfileResponse(
+        id=str(user.id),
+        phone_e164=user.phone_e164,
+        phone=user.phone_e164,
+        name=user.name,
+        preferred_language=user.preferred_language,
+        language=user.preferred_language,
+        roles=user.roles or [],
+        role=user.roles[0] if user.roles else "farmer",
+        village=user.village,
+        district=user.district,
+        state=user.state,
+    )
+
