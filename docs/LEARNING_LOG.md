@@ -92,3 +92,26 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 | Vehicle Routing & Dispatch Engine | **PLANNED** | Google OR-Tools + OSRM distance matrix integration. |
 | Satellite Burn Verification Pipeline | **PLANNED** | Sentinel-2 / Google Earth Engine post-harvest verification. |
 | Automated Weighbridge & Payment Escrow | **PLANNED** | Razorpay / UPI direct bank transfer integration. |
+
+---
+
+## Entry 3: Backend Deployment Preparation & Targeted Demo Allow-List
+
+- **Date:** 2026-10-08
+- **Branch:** `chore/deploy`
+- **Milestone:** Production JWT Secret Guard, Demo Phone Allow-List, and Render Deployment Configuration
+- **Status:** **BUILT**
+
+### 1. What Was Built
+- **Production Secret Guard (`app/core/config.py`):** Added `model_validator` enforcing that when `DEBUG=False`, the application strictly refuses to start if `JWT_SECRET_KEY` is missing or remains the default placeholder. Provides a student-friendly error message instructing how to generate a 32-byte secret using `openssl rand -hex 32`.
+- **Targeted Demo Phone Allow-List (`app/api/auth.py`):** Replaced universal `123456` OTP bypass with an allow-list: `123456` is accepted only when `DEMO_MODE=True` AND the requested phone number is present in `DEMO_PHONES`. All other numbers are rejected. Retained all expiry, rate limiting, and 5-attempt lockout security controls.
+- **Render Host Configuration:** Added `render.yaml`, `.python-version` (pinning Python `3.12.3`), dynamic start command using `$PORT` (`uvicorn app.main:app --host 0.0.0.0 --port $PORT`), and lightweight `/health` check.
+- **Deployment Documentation (`docs/DEPLOY.md`):** Authored complete step-by-step student deployment instructions covering Render UI clicks, variable configuration, verification curl scripts, log analysis, and pre-demo checklist.
+
+### 2. Engineering Challenges & Verified Facts
+- **Render Python Version Pinning:** Verified from official Render documentation that Render uses `PYTHON_VERSION` environment variable or `.python-version` file, and does not use `runtime.txt`.
+- **Test Harness Secret Isolation:** Added test-only cryptographic secret in `tests/conftest.py` so unit tests execute cleanly without needing local `.env` overrides or weakening production guards.
+
+### 3. Verification Metrics
+- Pytest suite: 17 passed tests (100% pass rate) covering JWT secret guard in production mode, allow-listed demo OTP verification, non-allowlisted phone rejection, and live PostGIS geometry rollback tests.
+

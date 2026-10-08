@@ -1,17 +1,23 @@
 import os
 import sys
 from pathlib import Path
+
+# Test-only secret so tests run with valid cryptographic key without touching production
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret-key-32-chars-long-strictly-for-unit-tests-only")
+os.environ.setdefault("DEBUG", "true")
+
+# Ensure backend directory is in sys.path
+backend_path = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(backend_path))
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Ensure backend directory is in sys.path
-backend_path = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(backend_path))
-
 from app.core.database import Base
+
 from app.dependencies import get_db
 from app.main import app
 from app.models.user import User

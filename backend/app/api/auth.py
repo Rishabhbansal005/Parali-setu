@@ -104,10 +104,18 @@ def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
             detail=f"Account temporarily locked due to excessive failed attempts. Try again in {remaining_lock} seconds.",
         )
 
+    # Allow-listed demo bypass: active only when DEMO_MODE is true, code is 123456,
+    # and the phone number is explicitly present in the DEMO_PHONES allow-list.
+    is_demo_bypass = bool(
+        settings.DEMO_MODE
+        and req.otp == "123456"
+        and (phone in settings.demo_phones_list)
+    )
+
     # 2. Check if OTP exists
     if not state or not state.otp:
-        if settings.DEMO_MODE and req.otp == "123456":
-            pass  # Allowed in demo mode without prior send
+        if is_demo_bypass:
+            pass  # Allowed for allow-listed demo phones without prior send
         else:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -122,10 +130,10 @@ def verify_otp(req: VerifyOtpRequest, db: Session = Depends(get_db)):
                 detail="OTP has expired. Please request a new one.",
             )
 
-        # 4. Check OTP match (with DEMO_MODE bypass option)
-        is_demo_bypass = bool(settings.DEMO_MODE and req.otp == "123456")
+        # 4. Check OTP match (with allow-listed DEMO_MODE bypass)
         if req.otp != state.otp and not is_demo_bypass:
             state.failed_attempts += 1
+
             if state.failed_attempts >= settings.OTP_MAX_VERIFY_ATTEMPTS:
                 state.locked_until = now + settings.OTP_LOCKOUT_SECONDS
                 state.failed_attempts = 0

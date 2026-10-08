@@ -4,8 +4,9 @@ import os
 from pathlib import Path
 from typing import List
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 
 class Settings(BaseSettings):
@@ -68,11 +69,40 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "ParaliSetu API"
     DEBUG: bool = False
-    DEMO_MODE: bool = False             # If True, universal OTP '123456' is accepted
+    DEMO_MODE: bool = False             # If True, universal OTP '123456' is accepted for DEMO_PHONES only
+    DEMO_PHONES: str = ""               # Comma-separated E.164 phone numbers (e.g. "+919810000001,+919810000002")
     ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
 
     # ── Yield config path ─────────────────────────────────────────────────────
     YIELD_CONFIG_PATH: str = str(Path(__file__).parent / "yield_config.yaml")
 
+    @property
+    def demo_phones_list(self) -> List[str]:
+        if not self.DEMO_PHONES:
+            return []
+        return [p.strip() for p in self.DEMO_PHONES.split(",") if p.strip()]
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self) -> "Settings":
+        if not self.DEBUG:
+            placeholders = {
+                "",
+                "CHANGE_ME_BEFORE_ANY_REAL_DEPLOYMENT",
+                "CHANGE_ME_BEFORE_COMMIT",
+                "changeme",
+                "secret",
+            }
+            if not self.JWT_SECRET_KEY or self.JWT_SECRET_KEY.strip() in placeholders:
+                raise ValueError(
+                    "Production configuration error: JWT_SECRET_KEY is missing or still set to a default placeholder "
+                    "while running in production mode (DEBUG=False).\n"
+                    "How to fix this:\n"
+                    "1. On Render / production: Generate a strong random key (e.g. run 'openssl rand -hex 32') and "
+                    "set it as the JWT_SECRET_KEY environment variable in your dashboard settings.\n"
+                    "2. For local development only: Set DEBUG=true or specify JWT_SECRET_KEY in your backend/.env file."
+                )
+        return self
+
 
 settings = Settings()
+
