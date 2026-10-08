@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
+import '../repositories/farmer_repository.dart';
 import '../theme.dart';
 import 'phone_login_screen.dart';
 
@@ -98,7 +99,9 @@ class _LanguageChoiceScreenState extends State<LanguageChoiceScreen> {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (context) => PhoneLoginScreen(
-                        language: _selectedLanguage,
+                        repository: RepositoryProvider.getRepository(),
+                        onLanguageChanged: (l) => setState(() => _selectedLanguage = l),
+                        currentLanguage: _selectedLanguage,
                       ),
                     ),
                   );
