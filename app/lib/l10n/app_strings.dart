@@ -367,7 +367,22 @@ class AppStrings {
       : (isHindi
           ? 'सुरक्षित एस्क्रो: ₹{amount} फैक्ट्री द्वारा लॉक किया गया। धर्मकांटा रसीद पर रिलीज होगा।'
           : 'ਸੁਰੱਖਿਅਤ ਐਸਕਰੋ: ₹{amount} ਫੈਕਟਰੀ ਦੁਆਰਾ ਲਾਕ। ਧਰਮਕੰਡਾ ਪਰਚੀ ਤੇ ਮਿਲੇਗਾ। /* NEEDS NATIVE REVIEW */');
-  String get viewBookingDetails => isEnglish ? 'Go to Home' : (isHindi ? 'मुख्य पृष्ठ पर जाएं' : 'ਮੁੱਖ ਪੰਨੇ ਤੇ ਜਾਓ /* NEEDS NATIVE REVIEW */');
+  String get viewBookingDetails => isEnglish ? 'View Booking Status' : (isHindi ? 'बुकिंग स्थिति देखें' : 'ਬੁਕਿੰਗ ਸਥਿਤੀ ਦੇਖੋ /* NEEDS NATIVE REVIEW */');
+
+  // ── Booking Status & Escrow Tracking ─────────────────────────────────────
+  String get bookingStatusTitle => isEnglish ? 'Live Pickup & Escrow' : (isHindi ? 'लाइव उठान व एस्क्रो स्थिति' : 'ਲਾਈਵ ਚੁਕਾਈ ਤੇ ਐਸਕਰੋ ਸਥਿਤੀ /* NEEDS NATIVE REVIEW */');
+  String get stepConfirmed => isEnglish ? 'Booking Confirmed' : (isHindi ? 'बुकिंग पक्की' : 'ਬੁਕਿੰਗ ਪੱਕੀ /* NEEDS NATIVE REVIEW */');
+  String get stepPickedUp => isEnglish ? 'Baler Picked Up' : (isHindi ? 'पराली उठान पूर्ण' : 'ਪਰਾਲੀ ਚੁਕਾਈ ਮੁਕੰਮਲ /* NEEDS NATIVE REVIEW */');
+  String get stepWeighed => isEnglish ? 'Weighbridge Weighed' : (isHindi ? 'धर्मकांटा तौल पूर्ण' : 'ਧਰਮਕੰਡਾ ਤੋਲ ਮੁਕੰਮਲ /* NEEDS NATIVE REVIEW */');
+  String get stepPaid => isEnglish ? 'Escrow Released' : (isHindi ? 'एस्क्रो राशि जारी' : 'ਐਸਕਰੋ ਰਾਸ਼ੀ ਜਾਰੀ /* NEEDS NATIVE REVIEW */');
+  String get escrowLockedBadge => isEnglish ? 'Factory Escrow Locked' : (isHindi ? 'फैक्ट्री एस्क्रो सुरक्षित' : 'ਫੈਕਟਰੀ ਐਸਕਰੋ ਸੁਰੱਖਿਅਤ /* NEEDS NATIVE REVIEW */');
+  String get escrowReleasedBadge => isEnglish ? 'Transferred to Bank' : (isHindi ? 'बैंक खाते में जमा' : 'ਬੈਂਕ ਖਾਤੇ ਵਿੱਚ ਜਮ੍ਹਾਂ /* NEEDS NATIVE REVIEW */');
+  String get simulateWeighbridgeSlip => isEnglish ? 'Simulate Weighbridge Receipt' : (isHindi ? 'धर्मकांटा रसीद दर्ज करें (डेमो)' : 'ਧਰਮਕੰਡਾ ਪਰਚੀ ਦਰਜ ਕਰੋ (ਡੈਮੋ) /* NEEDS NATIVE REVIEW */');
+  String get grossWeightLabel => isEnglish ? 'Gross Weight' : (isHindi ? 'सकल वजन' : 'ਕੁੱਲ ਵਜ਼ਨ /* NEEDS NATIVE REVIEW */');
+  String get tareWeightLabel => isEnglish ? 'Tare (Empty Truck)' : (isHindi ? 'खाली ट्रक वजन' : 'ਖਾਲੀ ਟਰੱਕ ਵਜ਼ਨ /* NEEDS NATIVE REVIEW */');
+  String get netWeightLabel => isEnglish ? 'Certified Net Straw' : (isHindi ? 'प्रमाणित शुद्ध पराली' : 'ਪ੍ਰਮਾਣਿਤ ਸ਼ੁੱਧ ਪਰਾਲੀ /* NEEDS NATIVE REVIEW */');
+  String get ticketNoLabel => isEnglish ? 'Ticket #' : (isHindi ? 'रसीद संख्या' : 'ਪਰਚੀ ਨੰਬਰ /* NEEDS NATIVE REVIEW */');
+  String get finalPayoutLabel => isEnglish ? 'Final Direct Payout' : (isHindi ? 'अंतिम शुद्ध भुगतान' : 'ਅੰਤਿਮ ਸ਼ੁੱਧ ਭੁਗਤਾਨ /* NEEDS NATIVE REVIEW */');
 
   // ── General Errors & Network ──────────────────────────────────────────────
   String get serverWakingUp => isEnglish

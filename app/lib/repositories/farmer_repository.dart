@@ -9,6 +9,7 @@ import '../models/farm.dart';
 import '../models/estimate_result.dart';
 import '../models/user_profile.dart';
 import '../models/matched_bundle.dart';
+import '../models/booking_result.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -67,6 +68,22 @@ abstract class FarmerRepository {
     String variety = 'PR-126',
     DateTime? harvestDate,
     double? stubbleTonnes,
+    Function(String)? onStatusUpdate,
+  });
+  Future<BookingResult> createBooking({
+    required String offerId,
+    String? notes,
+    Function(String)? onStatusUpdate,
+  });
+  Future<BookingResult> getBooking({
+    required String bookingId,
+    Function(String)? onStatusUpdate,
+  });
+  Future<BookingResult> submitWeighbridgeTicket({
+    required String bookingId,
+    required double grossWeightTonnes,
+    required double tareWeightTonnes,
+    String? ticketNumber,
     Function(String)? onStatusUpdate,
   });
 }
@@ -461,6 +478,106 @@ class ApiFarmerRepository implements FarmerRepository {
       },
     );
   }
+
+  @override
+  Future<BookingResult> createBooking({
+    required String offerId,
+    String? notes,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/bookings');
+        final response = await _client.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'offer_id': offerId,
+            'notes': notes,
+          }),
+        );
+
+        if (response.statusCode == 201 || response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return BookingResult.fromJson(data);
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to create booking');
+        }
+      },
+    );
+  }
+
+  @override
+  Future<BookingResult> getBooking({
+    required String bookingId,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/bookings/$bookingId');
+        final response = await _client.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return BookingResult.fromJson(data);
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to fetch booking');
+        }
+      },
+    );
+  }
+
+  @override
+  Future<BookingResult> submitWeighbridgeTicket({
+    required String bookingId,
+    required double grossWeightTonnes,
+    required double tareWeightTonnes,
+    String? ticketNumber,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/bookings/$bookingId/weighbridge');
+        final response = await _client.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'gross_weight_tonnes': grossWeightTonnes,
+            'tare_weight_tonnes': tareWeightTonnes,
+            'ticket_number': ticketNumber,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return BookingResult.fromJson(data);
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to submit weighbridge ticket');
+        }
+      },
+    );
+  }
 }
 
 class MockFarmerRepository implements FarmerRepository {
@@ -680,6 +797,105 @@ class MockFarmerRepository implements FarmerRepository {
         pm25AvoidedKg: effectiveStubble * 18.0,
       ),
     ];
+  }
+
+  final Map<String, BookingResult> _mockBookings = {};
+
+  @override
+  Future<BookingResult> createBooking({
+    required String offerId,
+    String? notes,
+    Function(String)? onStatusUpdate,
+  }) async {
+    final bookingId = 'bk-${DateTime.now().millisecondsSinceEpoch}';
+    final result = BookingResult(
+      id: bookingId,
+      offerId: offerId,
+      farmerId: _mockProfile.id,
+      status: 'confirmed',
+      escrowAmountInr: 5460.0,
+      confirmedAt: DateTime.now(),
+      payment: PaymentSummary(
+        id: 'pm-${DateTime.now().millisecondsSinceEpoch}',
+        bookingId: bookingId,
+        provider: 'simulated_escrow',
+        escrowAmountInr: 5460.0,
+        status: 'held',
+        heldAt: DateTime.now(),
+      ),
+    );
+    _mockBookings[bookingId] = result;
+    return result;
+  }
+
+  @override
+  Future<BookingResult> getBooking({
+    required String bookingId,
+    Function(String)? onStatusUpdate,
+  }) async {
+    if (_mockBookings.containsKey(bookingId)) {
+      return _mockBookings[bookingId]!;
+    }
+    return BookingResult(
+      id: bookingId,
+      offerId: 'off-1111-2222-3333-444455556666',
+      farmerId: _mockProfile.id,
+      status: 'confirmed',
+      escrowAmountInr: 5460.0,
+      confirmedAt: DateTime.now(),
+      payment: PaymentSummary(
+        id: 'pm-mock',
+        bookingId: bookingId,
+        provider: 'simulated_escrow',
+        escrowAmountInr: 5460.0,
+        status: 'held',
+        heldAt: DateTime.now(),
+      ),
+    );
+  }
+
+  @override
+  Future<BookingResult> submitWeighbridgeTicket({
+    required String bookingId,
+    required double grossWeightTonnes,
+    required double tareWeightTonnes,
+    String? ticketNumber,
+    Function(String)? onStatusUpdate,
+  }) async {
+    final netTonnes = (grossWeightTonnes - tareWeightTonnes);
+    final netKg = netTonnes * 1000.0;
+    final now = DateTime.now();
+    final grossIncome = netTonnes * 1350.0;
+    final netPayout = (grossIncome - 4800.0 - 540.0).clamp(0.0, double.infinity);
+
+    final current = await getBooking(bookingId: bookingId);
+    final updated = current.copyWith(
+      status: 'paid',
+      finalPayoutInr: netPayout,
+      weighedAt: now,
+      paidAt: now,
+      pickedUpAt: current.pickedUpAt ?? now.subtract(const Duration(hours: 3)),
+      payment: PaymentSummary(
+        id: current.payment?.id ?? 'pm-mock',
+        bookingId: bookingId,
+        provider: 'simulated_escrow',
+        escrowAmountInr: current.escrowAmountInr ?? 5460.0,
+        finalAmountInr: netPayout,
+        status: 'released',
+        heldAt: current.payment?.heldAt ?? now.subtract(const Duration(hours: 24)),
+        releasedAt: now,
+      ),
+      weighbridgeRecord: WeighbridgeSummary(
+        id: 'wb-mock-${now.millisecondsSinceEpoch}',
+        bookingId: bookingId,
+        weightKg: netKg,
+        weightTonnes: double.parse(netTonnes.toStringAsFixed(2)),
+        ticketNumber: ticketNumber ?? 'DK-778899',
+        measuredAt: now,
+      ),
+    );
+    _mockBookings[bookingId] = updated;
+    return updated;
   }
 }
 

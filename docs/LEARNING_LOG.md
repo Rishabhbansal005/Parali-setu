@@ -300,6 +300,14 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
   - Implemented safe fallback buyer rate lookups in `submit_weighbridge_ticket` to maintain SQLite test compatibility alongside production PostgreSQL/PostGIS.
 - **Lifecycle Integration Test Suite (`backend/tests/test_booking_lifecycle.py`):**
   - Validates full 4-step sequence: Booking Escrow Hold -> Pickup Transition -> Gross/Tare validation error -> Dharamkanta Ticket Net calculation & instant escrow payout release.
+- **Mobile Frontend (`app/lib/screens/booking_detail_screen.dart` & `OptionsScreen`):**
+  - Added `BookingResult`, `PaymentSummary`, and `WeighbridgeSummary` data models in `app/lib/models/booking_result.dart`.
+  - Added repository methods (`createBooking`, `getBooking`, `submitWeighbridgeTicket`) with offline mock fallbacks and live API connectivity.
+  - Built `BookingDetailScreen` featuring real-time 4-step progress stepper (Confirmed -> Picked Up -> Weighed -> Paid), escrow locked/released hero badge, trip logistics card, environmental impact pill, and on-device Dharamkanta slip simulator for instant live testing.
+  - Linked `OptionsScreen` "Book This Pickup" button to initiate backend booking and transition directly to the live escrow screen.
+  - Added trilingual localization keys in English, Hindi, and Punjabi.
 
 ### 2. Verification Metrics
-- `pytest`: **25/25 tests passed** (100% green across all unit and integration test suites).
+- `pytest`: **25/25 tests passed** (100% green across backend unit and integration test suites).
+- `flutter analyze`: **0 issues found** (clean lint).
+- `flutter test`: **13/13 tests passed** (100% green across mobile unit and widget test suites).

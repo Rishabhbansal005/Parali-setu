@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_strings.dart';
 import '../models/matched_bundle.dart';
+import '../models/booking_result.dart';
 import '../repositories/farmer_repository.dart';
 import '../theme.dart';
+import 'booking_detail_screen.dart';
 
 class OptionsScreen extends StatefulWidget {
   final double acres;
@@ -47,7 +49,38 @@ class _OptionsScreenState extends State<OptionsScreen> {
     );
   }
 
-  void _showBookingConfirmation(MatchedBundle bundle, AppStrings strings) {
+  Future<void> _handleBookPickup(MatchedBundle bundle, AppStrings strings) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    BookingResult? bookingResult;
+    try {
+      bookingResult = await widget.repository.createBooking(
+        offerId: bundle.offerId,
+      );
+    } catch (e) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.of(context).pop();
+
+    _showBookingConfirmation(bundle, strings, bookingResult);
+  }
+
+  void _showBookingConfirmation(MatchedBundle bundle, AppStrings strings, BookingResult bookingResult) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -146,7 +179,16 @@ class _OptionsScreenState extends State<OptionsScreen> {
                   ),
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    Navigator.of(context).pop(); // Back to home
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => BookingDetailScreen(
+                          initialBooking: bookingResult,
+                          bundle: bundle,
+                          repository: widget.repository,
+                          language: widget.language,
+                        ),
+                      ),
+                    );
                   },
                   child: Text(
                     strings.viewBookingDetails,
@@ -470,7 +512,7 @@ class _OptionsScreenState extends State<OptionsScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                            onPressed: () => _showBookingConfirmation(bundle, strings),
+                            onPressed: () => _handleBookPickup(bundle, strings),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
