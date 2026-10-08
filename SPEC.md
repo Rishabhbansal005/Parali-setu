@@ -1,6 +1,6 @@
 # ParaliSetu — Product Specification (SPEC.md)
 
-**Version:** 0.1 — 7 October 2026
+**Version:** 0.2 — 8 October 2026
 **Status:** Living document. All agents must read this file before writing code.
 **Owner:** Team ParaliSetu (Amazon Environmental Hacks, Oct 8–11, 2026)
 
@@ -918,10 +918,12 @@ app must follow them. They take priority over standard mobile UX conventions.
    or bottom-centre). Tapping it reads the screen content aloud via TTS and
    accepts voice input for the current task.
 
-4. **Hindi and Punjabi only.** All UI text, labels, error messages, and push
-   notifications are in the user's chosen language. No English in the farmer
-   app. Transliteration is acceptable where a technical term has no
-   vernacular equivalent; always add a spoken explanation.
+4. **English default; Hindi and Punjabi supported.** English is the default
+   application language. Full vernacular localization is provided for Hindi
+   (हिंदी) and Punjabi (ਪੰਜਾਬੀ). Users can select their language on initial
+   onboarding chips or anytime in Profile settings. Transliteration is
+   acceptable where a technical term has no vernacular equivalent; always add
+   a spoken explanation. All Punjabi strings maintain active native-review markers.
 
 5. **Show benefit before asking for details.** The estimate screen (benefit)
    comes before the 2-question form (details). Never ask for data before

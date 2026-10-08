@@ -179,4 +179,63 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 ### 2. Verification Metrics
 - Pytest suite: **21 passed tests** (100% pass rate) covering profile retrieval, profile updates, language validation, unauthorized update rejection, and token refresh lifecycle.
 
+---
+
+## Entry 6: Trilingual Farmer UX, Offline Architecture, Split APKs & Physical Device Validation
+
+- **Date:** 2026-10-08
+- **Branch:** `feat/app-ux`
+- **Milestone:** Farmer-First UX Overhaul, Offline Resilience & Device Verification
+- **Status:** **BUILT & VERIFIED**
+
+### 1. What Was Built
+- **Trilingual Accessibility (English Default, Hindi, Punjabi):**
+  - Configured English as the default application language per SPEC.md §13 v0.2.
+  - Implemented complete string maps for English, Hindi, and Punjabi (all Punjabi strings explicitly annotated with `/* NEEDS NATIVE REVIEW */`).
+  - Added visible language chips to Onboarding and a dedicated language picker in Profile with persistent storage in `FlutterSecureStorage`.
+- **First-Launch Onboarding Flow:**
+  - 3-slide swipeable carousel covering key farmer value propositions (Slide 1: "Do not burn it. Sell it.", Slide 2: "We find the machine, truck and buyer for you.", Slide 3: "Get paid on the actual weight, safely.").
+  - Interactive language chips, animated page indicator dots, and Skip/Next controls.
+  - 100% vector-drawn custom illustrations using Flutter `CustomPainter` (sun and golden stubble, machine and truck logistics, certified digital weighbridge scale); zero copyrighted external assets.
+- **Robust Farmer Session Lifecycle:**
+  - Seamless auto-login on app launch if valid tokens exist in `FlutterSecureStorage`.
+  - Silent 401 token refresh interceptor via `POST /auth/token/refresh`.
+  - Offline cache fallback with a warm amber offline banner if device network is unavailable.
+  - Log out securely wipes auth tokens while preserving the farmer's selected language.
+- **Farmer-Friendly Auth UX:**
+  - Phone login with prominent `+91` badge, large input typography, and plain-language validation errors.
+  - 6-box OTP entry with auto-focus traversal, auto-submission at 6 digits, 30-second resend countdown timer, and "Change Number" navigation.
+  - Debug-only demo hint ("123456") that is completely stripped in release builds.
+- **Home & Profile Screens:**
+  - Personalized greeting with farmer name lookup (`Welcome, Gurpreet Singh`).
+  - High-visibility primary action card ("Check my stubble value") and "How It Works" educational flow.
+  - Strict 2-tab bottom navigation (`Home` and `Profile`), with future features clearly badged as "Coming soon".
+  - Profile tab featuring editable name modal bottom sheet, read-only phone number, village & district display, language switcher, prototype simulation note, and red-accented log out button.
+- **Agronomic Stubble & Earnings Estimation:**
+  - High-impact range card displaying low-to-high dry stubble yield (e.g., `6.4 - 9.6 Tonnes`, central estimate `~8.0 Tonnes` for 4.0 acres PR-126).
+  - Custom gradient range bar visualizing central estimate positioning.
+  - Estimated earnings calculated from a single centralized constant (`AppConstants.assumedPricePerTonneInr = 1200.0`), displaying assumed price badge and certified weighbridge disclaimer.
+- **Design Tokens & Bundled Offline Fonts:**
+  - Deep agricultural green (`#1C6B32`), warm paper background (`#F9FAF7`), wheat gold accent (`#D99B26`), rounded card geometry (16-24dp), and minimum 56dp touch targets.
+  - Bundled offline Noto Sans, Noto Sans Devanagari, and Noto Sans Gurmukhi fonts (~136 KB total), eliminating online font download delays.
+
+### 2. Physical Device Verification (Realme RMX3780 / 5L4DS8BALB6XIJ9H)
+- Successfully deployed release build to physical hardware over ADB.
+- Captured 6 production screenshots saved in `docs/screenshots/`:
+  1. `docs/screenshots/onboarding.png`
+  2. `docs/screenshots/login.png`
+  3. `docs/screenshots/otp.png`
+  4. `docs/screenshots/home.png`
+  5. `docs/screenshots/profile.png`
+  6. `docs/screenshots/estimate.png`
+
+### 3. Verification Metrics & APK Sizes
+- `flutter analyze`: **0 issues found** (clean lint).
+- `flutter test`: **8/8 unit & widget tests passed** (100% pass rate).
+- Production Release Split APKs (`flutter build apk --release --split-per-abi`):
+  - `app-arm64-v8a-release.apk`: **17.03 MB** (well below the 25 MB budget limit; 32% headroom remaining).
+  - `app-armeabi-v7a-release.apk`: **14.47 MB**
+  - `app-x86_64-release.apk`: **18.45 MB**
+
+
 

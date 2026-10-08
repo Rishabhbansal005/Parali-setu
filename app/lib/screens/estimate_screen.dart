@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
+import '../constants.dart';
 import '../l10n/app_strings.dart';
 import '../models/estimate_result.dart';
 import '../theme.dart';
@@ -26,190 +28,210 @@ class EstimateScreen extends StatelessWidget {
     final currencyFormatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0);
 
     return Scaffold(
+      backgroundColor: AppTheme.warmBackground,
       appBar: AppBar(
         title: Text(strings.estimateTitle),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppTheme.textDark),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Stubble Quantity Card
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFC8D6C8)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primaryGreen.withValues(alpha: 0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.eco, color: AppTheme.secondaryGreen, size: 28),
-                        const SizedBox(width: 8),
-                        Text(
-                          strings.stubbleQtyLabel,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
+              // 1. Big Stubble Quantity & Range Bar Card
+              Card(
+                elevation: 2,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.eco, color: AppTheme.primaryGreen, size: 26),
+                          const SizedBox(width: 8),
+                          Text(
+                            strings.stubbleQtyLabel,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    // Central Midpoint
-                    Text(
-                      '~${estimate.stubbleTonnesMid.toStringAsFixed(1)} ${strings.tonnesUnit}',
-                      style: const TextStyle(
-                        fontSize: 38,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.primaryGreen,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    // Range Indicator
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryGreen.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        '${strings.approxRange}: ${estimate.stubbleTonnesLow.toStringAsFixed(1)} - ${estimate.stubbleTonnesHigh.toStringAsFixed(1)} ${strings.tonnesUnit}',
+                      const SizedBox(height: 14),
+
+                      // Big range number
+                      Text(
+                        '${estimate.stubbleTonnesLow.toStringAsFixed(1)} - ${estimate.stubbleTonnesHigh.toStringAsFixed(1)} ${strings.tonnesUnit}',
+                        textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.secondaryGreen,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primaryGreen,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+
+                      Text(
+                        '${strings.midEstimate}: ~${estimate.stubbleTonnesMid.toStringAsFixed(1)} ${strings.tonnesUnit}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Visual Range Bar
+                      _buildRangeBar(
+                        low: estimate.stubbleTonnesLow,
+                        mid: estimate.stubbleTonnesMid,
+                        high: estimate.stubbleTonnesHigh,
+                        unit: strings.tonnesUnit,
+                      ),
+                    ],
+                  ),
                 ),
               ),
+
               const SizedBox(height: 16),
 
               // 2. Expected Income Card
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF8E1), // Warm Amber Light
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFFFE082)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.12),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+              Card(
+                elevation: 2,
+                color: const Color(0xFFFFF9E6), // Warm golden tint
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  side: const BorderSide(color: Color(0xFFFFE082), width: 1.5),
                 ),
-
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.currency_rupee, color: AppTheme.paraliGold, size: 28),
-                        const SizedBox(width: 6),
-                        Text(
-                          strings.expectedEarningsLabel,
+                child: Padding(
+                  padding: const EdgeInsets.all(22),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.currency_rupee, color: Color(0xFFB78103), size: 26),
+                          const SizedBox(width: 6),
+                          Text(
+                            strings.expectedEarningsLabel,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        '${currencyFormatter.format(estimate.incomeLowInr)} - ${currencyFormatter.format(estimate.incomeHighInr)}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFFB78103),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFECB3),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          strings.assumedPriceNote(AppConstants.assumedPricePerTonneInr),
                           style: const TextStyle(
-                            fontSize: 18,
+                            fontSize: 13,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
+                            color: Color(0xFF7A5500),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      '${currencyFormatter.format(estimate.incomeLowInr)} - ${currencyFormatter.format(estimate.incomeHighInr)}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.paraliGold,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // 3. Field Summary Details
+              const SizedBox(height: 18),
+
+              // 3. Certified Weighbridge Disclaimer
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE0E0E0)),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE0EAE0)),
                 ),
-                child: Column(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSummaryRow('रकबा (Area)', '${acres.toStringAsFixed(1)} एकड़'),
-                    const Divider(height: 18),
-                    _buildSummaryRow('किस्म (Variety)', variety),
-                    const Divider(height: 18),
-                    _buildSummaryRow('कटाई तारीख (Harvest Date)', estimate.harvestDate),
+                    const Icon(Icons.scale_outlined, color: AppTheme.primaryGreen, size: 24),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        strings.disclaimer,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppTheme.textMuted,
+                          height: 1.45,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
 
-              // 4. Positive Action Guidance Banner
+              const SizedBox(height: 14),
+
+              // 4. Advisory Next Steps
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryGreen.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.primaryGreen.withValues(alpha: 0.2)),
+                  color: const Color(0xFFE8F5E9),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFC8E6C9)),
                 ),
-
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(Icons.check_circle_outline, color: AppTheme.primaryGreen, size: 26),
+                    const Icon(Icons.verified_user_outlined, color: AppTheme.secondaryGreen, size: 24),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         strings.nextStepAdvice,
                         style: const TextStyle(
                           fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.primaryGreen,
+                          color: AppTheme.textDark,
+                          fontWeight: FontWeight.w500,
+                          height: 1.45,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
 
-              // Disclaimer
-              Text(
-                strings.disclaimer,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-              ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 28),
 
-              // Recalculate Button
-              ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.refresh),
-                label: Text(strings.recalculateBtn),
+              // 5. Recalculate button (56dp min height)
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(strings.recalculateBtn),
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -219,12 +241,61 @@ class EstimateScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  Widget _buildRangeBar({
+    required double low,
+    required double mid,
+    required double high,
+    required String unit,
+  }) {
+    return Column(
       children: [
-        Text(label, style: const TextStyle(fontSize: 15, color: AppTheme.textMuted)),
-        Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textDark)),
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Background bar
+            Container(
+              height: 14,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFFA5D6A7),
+                    AppTheme.primaryGreen,
+                    Color(0xFF81C784),
+                  ],
+                ),
+              ),
+            ),
+            // Center indicator pip
+            Container(
+              width: 10,
+              height: 22,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: AppTheme.primaryGreen, width: 2.5),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              '${low.toStringAsFixed(1)} $unit',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+            ),
+            Text(
+              '~${mid.toStringAsFixed(1)} $unit',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryGreen),
+            ),
+            Text(
+              '${high.toStringAsFixed(1)} $unit',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+            ),
+          ],
+        ),
       ],
     );
   }

@@ -6,13 +6,19 @@ import '../theme.dart';
 import 'estimate_screen.dart';
 
 class FieldDetailsScreen extends StatefulWidget {
-  final AppLanguage language;
-  final String farmerId;
+  final AppLanguage? language;
+  final String? farmerId;
+  final FarmerRepository? repository;
+  final Function(AppLanguage)? onLanguageChanged;
+  final AppLanguage? currentLanguage;
 
   const FieldDetailsScreen({
     super.key,
-    required this.language,
-    required this.farmerId,
+    this.language,
+    this.farmerId,
+    this.repository,
+    this.onLanguageChanged,
+    this.currentLanguage,
   });
 
   @override
@@ -20,7 +26,14 @@ class FieldDetailsScreen extends StatefulWidget {
 }
 
 class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
-  final _repository = RepositoryProvider.getRepository();
+  late final FarmerRepository _repository;
+  AppLanguage get _lang => widget.currentLanguage ?? widget.language ?? AppLanguage.english;
+
+  @override
+  void initState() {
+    super.initState();
+    _repository = widget.repository ?? RepositoryProvider.getRepository();
+  }
 
   double _acres = 4.0;
   String _selectedVariety = 'PR-126';
@@ -39,7 +52,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
     // Friendly voice placeholder notification per SPEC §13
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(AppStrings(widget.language).micComingSoon),
+        content: Text(AppStrings(_lang).micComingSoon),
         backgroundColor: AppTheme.paraliGold,
         duration: const Duration(seconds: 3),
       ),
@@ -81,7 +94,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) => EstimateScreen(
-              language: widget.language,
+              language: _lang,
               estimate: estimate,
               acres: _acres,
               variety: _selectedVariety,
@@ -102,7 +115,7 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppStrings(widget.language);
+    final strings = AppStrings(_lang);
 
     return Scaffold(
       appBar: AppBar(

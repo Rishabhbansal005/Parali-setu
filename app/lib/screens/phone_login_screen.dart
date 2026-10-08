@@ -1,291 +1,293 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../l10n/app_strings.dart';
 import '../repositories/farmer_repository.dart';
 import '../theme.dart';
-import 'field_details_screen.dart';
+import 'otp_screen.dart';
 
 class PhoneLoginScreen extends StatefulWidget {
-  final AppLanguage language;
+  final FarmerRepository repository;
+  final Function(AppLanguage) onLanguageChanged;
+  final AppLanguage currentLanguage;
 
-  const PhoneLoginScreen({super.key, required this.language});
+  const PhoneLoginScreen({
+    super.key,
+    required this.repository,
+    required this.onLanguageChanged,
+    required this.currentLanguage,
+  });
 
   @override
   State<PhoneLoginScreen> createState() => _PhoneLoginScreenState();
 }
 
 class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
-  final _phoneController = TextEditingController();
-  final _otpController = TextEditingController();
-  final _repository = RepositoryProvider.getRepository();
-
-  bool _isOtpSent = false;
+  final TextEditingController _phoneController = TextEditingController();
   bool _isLoading = false;
-  String _statusMessage = '';
   String? _errorMessage;
+  String? _statusMessage;
 
-  static const bool _isDemoLoginEnabled = bool.fromEnvironment('DEMO_LOGIN', defaultValue: false);
+  static const bool isDemoLoginEnabled = bool.fromEnvironment('DEMO_LOGIN', defaultValue: false);
 
   @override
   void dispose() {
-    _phoneController.dispose() ;
-    _otpController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
-  void _sendOtp() async {
-    final phoneInput = _phoneController.text.trim();
-    if (phoneInput.length < 10) {
-      setState(() {
-        _errorMessage = AppStrings(widget.language).invalidPhone;
-      });
+  Future<void> _handleSendOtp([String? overridePhone]) async {
+    final rawPhone = overridePhone ?? _phoneController.text.trim();
+    final strings = AppStrings(widget.currentLanguage);
+
+    if (rawPhone.length != 10 || !RegExp(r'^[0-9]+$').hasMatch(rawPhone)) {
+      setState(() => _errorMessage = strings.invalidPhone);
       return;
     }
 
-    final formattedPhone = phoneInput.startsWith('+91')
-        ? phoneInput
-        : '+91${phoneInput.replaceAll(RegExp(r'[^0-9]'), '')}';
+    final phoneE164 = '+91$rawPhone';
 
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _statusMessage = '';
+      _statusMessage = null;
     });
 
     try {
-      await _repository.sendOtp(
-        formattedPhone,
-        onStatusUpdate: (msg) {
-          if (mounted) setState(() => _statusMessage = msg);
-        },
-      );
-      if (mounted) {
-        setState(() {
-          _isOtpSent = true;
-          _isLoading = false;
-          _statusMessage = '';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
-    }
-  }
-
-  void _verifyOtp() async {
-    final otpInput = _otpController.text.trim();
-    if (otpInput.length != 6) {
-      setState(() {
-        _errorMessage = AppStrings(widget.language).invalidOtp;
-      });
-      return;
-    }
-
-    final phoneInput = _phoneController.text.trim();
-    final formattedPhone = phoneInput.startsWith('+91')
-        ? phoneInput
-        : '+91${phoneInput.replaceAll(RegExp(r'[^0-9]'), '')}';
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _statusMessage = '';
-    });
-
-    try {
-      final tokens = await _repository.verifyOtp(
-        formattedPhone,
-        otpInput,
+      await widget.repository.sendOtp(
+        phoneE164,
         onStatusUpdate: (msg) {
           if (mounted) setState(() => _statusMessage = msg);
         },
       );
 
-      if (mounted) {
-        setState(() => _isLoading = false);
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => FieldDetailsScreen(
-              language: widget.language,
-              farmerId: tokens.farmerId,
-            ),
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => OtpScreen(
+            phoneE164: phoneE164,
+            repository: widget.repository,
+            onLanguageChanged: widget.onLanguageChanged,
+            currentLanguage: widget.currentLanguage,
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e.toString().replaceFirst('Exception: ', '');
-        });
-      }
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
     }
-  }
-
-  void _quickDemoLogin() {
-    // Quick demo login pre-fills seeded farmer Gurpreet Singh's phone number
-    setState(() {
-      _phoneController.text = '9810000001';
-      _otpController.text = '123456';
-    });
-    _verifyOtp();
   }
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppStrings(widget.language);
+    final strings = AppStrings(widget.currentLanguage);
 
     return Scaffold(
+      backgroundColor: AppTheme.warmBackground,
       appBar: AppBar(
-        title: Text(strings.loginTitle),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        title: Text(
+          strings.appTitle,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              Text(
+                strings.loginTitle,
+                style: const TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
               Text(
                 strings.loginSubtitle,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 24),
-
-              // Phone Field
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                enabled: !_isOtpSent && !_isLoading,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  labelText: strings.phoneLabel,
-                  prefixText: '+91 ',
-                  prefixStyle: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  prefixIcon: const Icon(Icons.phone_android, color: AppTheme.primaryGreen),
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppTheme.textMuted,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 32),
 
-              // OTP Field (visible once OTP is requested)
-              if (_isOtpSent) ...[
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  enabled: !_isLoading,
-                  maxLength: 6,
-                  style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-                  textAlign: TextAlign.center,
-                  decoration: InputDecoration(
-                    labelText: strings.enterOtp,
-                    counterText: '',
-                    prefixIcon: const Icon(Icons.lock_outline, color: AppTheme.primaryGreen),
+              // Phone number input with fixed +91 prefix
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.04),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                      decoration: const BoxDecoration(
+                        border: Border(
+                          right: BorderSide(color: Color(0xFFE0E0E0), width: 1.5),
+                        ),
+                      ),
+                      child: const Row(
+                        children: [
+                          Text('🇮🇳', style: TextStyle(fontSize: 20)),
+                          SizedBox(width: 8),
+                          Text(
+                            '+91',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: TextField(
+                        key: const Key('phone_number_field'),
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        maxLength: 10,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textDark,
+                          letterSpacing: 1.2,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: '98100 00001',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            letterSpacing: 1.2,
+                          ),
+                          counterText: '',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: AppTheme.warningRed, fontSize: 14),
                   ),
                 ),
-                const SizedBox(height: 8),
 
-                // Demo hint strictly in debug builds per instructions
-                if (kDebugMode)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.paraliGold.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+              if (_statusMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Text(
+                    _statusMessage!,
+                    style: const TextStyle(color: AppTheme.primaryGreen, fontSize: 14),
+                  ),
+                ),
 
-                    child: Row(
+              const SizedBox(height: 28),
+
+              // Get OTP button (56dp min height)
+              SizedBox(
+                height: 56,
+                width: double.infinity,
+                child: ElevatedButton(
+                  key: const Key('get_otp_btn'),
+                  onPressed: _isLoading ? null : () => _handleSendOtp(),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                        )
+                      : Text(strings.getOtpBtn),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // DEMO quick login button if --dart-define=DEMO_LOGIN=true
+              if (isDemoLoginEnabled)
+                SizedBox(
+                  height: 56,
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    key: const Key('demo_quick_login_btn'),
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            _phoneController.text = '9810000001';
+                            _handleSendOtp('9810000001');
+                          },
+                    child: Text(strings.demoQuickLoginBtn),
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+
+              // Demo mode notices
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F8E9),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFC5E1A5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        const Icon(Icons.info_outline, size: 18, color: AppTheme.paraliGold),
+                        const Icon(Icons.info_outline, color: AppTheme.secondaryGreen, size: 20),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            strings.demoHint,
-                            style: const TextStyle(fontSize: 13, color: AppTheme.paraliGold, fontWeight: FontWeight.bold),
+                            strings.demoSmsNotice,
+                            style: const TextStyle(fontSize: 13, color: AppTheme.textDark),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                const SizedBox(height: 16),
-              ],
-
-              // Status message during cold-start server wake-up
-              if (_statusMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: Row(
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGreen),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          _statusMessage,
-                          style: const TextStyle(color: AppTheme.secondaryGreen, fontSize: 13, fontWeight: FontWeight.w600),
+                    if (kDebugMode) ...[
+                      const Divider(height: 18, color: Color(0xFFC5E1A5)),
+                      Text(
+                        strings.demoHint,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryGreen,
                         ),
                       ),
                     ],
-                  ),
+                  ],
                 ),
-
-              // Error banner
-              if (_errorMessage != null)
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.red, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.red, fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-              // Action Button (Send OTP or Verify OTP)
-              ElevatedButton(
-                onPressed: _isLoading ? null : (_isOtpSent ? _verifyOtp : _sendOtp),
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 24,
-                        width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                      )
-                    : Text(_isOtpSent ? strings.verifyOtp : strings.sendOtp),
               ),
-              const SizedBox(height: 16),
-
-              // Optional Demo Login Button (--dart-define=DEMO_LOGIN=true)
-              if (_isDemoLoginEnabled) ...[
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _quickDemoLogin,
-                  icon: const Icon(Icons.bolt, color: AppTheme.paraliGold),
-                  label: Text(
-                    strings.demoLoginBtn,
-                    style: const TextStyle(color: AppTheme.paraliGold),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
             ],
           ),
         ),
