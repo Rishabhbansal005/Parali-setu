@@ -276,6 +276,30 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - `flutter analyze`: **0 issues found** (100% clean lint).
 - `flutter test`: **10/10 unit & widget tests passed** (including `test/options_screen_test.dart`).
 
+---
 
+## Entry 8: Booking Lifecycle State Machine, Escrow Hold & Dharamkanta Certified Weighbridge Release
 
+- **Date:** 2026-10-09
+- **Branch:** `feat/booking-lifecycle`
+- **Goal:** Implement the complete end-to-end booking state machine, simulated factory escrow fund locking, and certified Dharamkanta weighbridge ticket gross/tare calculation releasing net payout directly to the farmer.
 
+### 1. What Was Built
+- **Pydantic Schemas (`backend/app/schemas/booking.py`):**
+  - `BookingCreateRequest`: Validates `offer_id` and optional notes.
+  - `BookingStatusUpdateRequest`: Governs lifecycle state transitions (`confirmed` -> `picked_up` -> `cancelled`).
+  - `WeighbridgeSubmitRequest`: Accepts `gross_weight_tonnes`, `tare_weight_tonnes`, `ticket_number`, and ticket image URL.
+  - `WeighbridgeSummary`, `PaymentSummary`, and `BookingResponse`: Comprehensive serializable contracts for payment and weighbridge data.
+- **Booking Lifecycle Endpoints (`backend/app/api/bookings.py`):**
+  - `POST /bookings`: Creates booking record, transitions state to `confirmed`, and locks estimated payout into simulated factory escrow (`Payment(status="held")`).
+  - `GET /bookings/{id}`: Detailed query endpoint returning real-time status, escrow balances, and weighbridge certificate information.
+  - `PATCH /bookings/{id}/status`: Transitions booking state to `picked_up` with timestamp recording, or `cancelled` with automatic escrow refund.
+  - `POST /bookings/{id}/weighbridge`: Dharamkanta certified weighbridge entry endpoint. Enforces `gross_weight > tare_weight`, calculates exact net metric tonnes and kg, records ticket number and timestamp, recalculates final farmer payout based on verified net yield, and instantly releases escrow (`Payment(status="released")`) transitioning booking to `paid`.
+- **Database Isolation & Model Robustness:**
+  - Added non-geom table setups (`Booking`, `Offer`, `Payment`, `WeighbridgeRecord`) in `backend/tests/conftest.py`.
+  - Implemented safe fallback buyer rate lookups in `submit_weighbridge_ticket` to maintain SQLite test compatibility alongside production PostgreSQL/PostGIS.
+- **Lifecycle Integration Test Suite (`backend/tests/test_booking_lifecycle.py`):**
+  - Validates full 4-step sequence: Booking Escrow Hold -> Pickup Transition -> Gross/Tare validation error -> Dharamkanta Ticket Net calculation & instant escrow payout release.
+
+### 2. Verification Metrics
+- `pytest`: **25/25 tests passed** (100% green across all unit and integration test suites).

@@ -21,6 +21,10 @@ from app.core.database import Base
 from app.dependencies import get_db
 from app.main import app
 from app.models.user import User
+from app.models.offer import Offer
+from app.models.booking import Booking
+from app.models.payment import Payment
+from app.models.weighbridge import WeighbridgeRecord
 
 # In-memory SQLite for testing
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -35,9 +39,19 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_db():
     # Only create tables without Geometry triggers for standard unit testing
-    User.__table__.create(bind=engine, checkfirst=True)
+    tables = [
+        User.__table__,
+        Offer.__table__,
+        Booking.__table__,
+        Payment.__table__,
+        WeighbridgeRecord.__table__,
+    ]
+    for table in tables:
+        table.create(bind=engine, checkfirst=True)
     yield
-    User.__table__.drop(bind=engine, checkfirst=True)
+    for table in reversed(tables):
+        table.drop(bind=engine, checkfirst=True)
+
 
 @pytest.fixture
 def db_session():
