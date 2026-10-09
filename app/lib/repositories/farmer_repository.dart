@@ -10,6 +10,7 @@ import '../models/estimate_result.dart';
 import '../models/user_profile.dart';
 import '../models/matched_bundle.dart';
 import '../models/booking_result.dart';
+import '../models/certificate_result.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -84,6 +85,10 @@ abstract class FarmerRepository {
     required double grossWeightTonnes,
     required double tareWeightTonnes,
     String? ticketNumber,
+    Function(String)? onStatusUpdate,
+  });
+  Future<CertificateResult> getCertificate({
+    required String bookingId,
     Function(String)? onStatusUpdate,
   });
 }
@@ -578,6 +583,35 @@ class ApiFarmerRepository implements FarmerRepository {
       },
     );
   }
+
+  @override
+  Future<CertificateResult> getCertificate({
+    required String bookingId,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/bookings/$bookingId/certificate');
+        final response = await _client.get(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return CertificateResult.fromJson(data);
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to fetch certificate');
+        }
+      },
+    );
+  }
 }
 
 class MockFarmerRepository implements FarmerRepository {
@@ -896,6 +930,38 @@ class MockFarmerRepository implements FarmerRepository {
     );
     _mockBookings[bookingId] = updated;
     return updated;
+  }
+
+  @override
+  Future<CertificateResult> getCertificate({
+    required String bookingId,
+    Function(String)? onStatusUpdate,
+  }) async {
+    final current = await getBooking(bookingId: bookingId);
+    final tonnes = current.weighbridgeRecord?.weightTonnes ?? 8.0;
+    return CertificateResult(
+      certificateId: 'CERT-PSETU-${bookingId.length > 8 ? bookingId.substring(0, 8).toUpperCase() : "889900"}',
+      bookingId: bookingId,
+      farmerName: _mockProfile.name ?? 'Gurpreet Singh',
+      village: _mockProfile.village ?? 'Kot Buddha',
+      district: _mockProfile.district ?? 'Tarn Taran',
+      state: 'Punjab',
+      stubbleTonnes: tonnes,
+      satelliteSource: 'Copernicus Sentinel-2 (SWIR B12-B8)',
+      imageDate: DateTime.now().toIso8601String().substring(0, 10),
+      cloudCoverPct: 4.2,
+      deltaNbr: 0.038,
+      resultState: 'verified_no_burn',
+      burnDetected: false,
+      burnSeverity: 'NONE',
+      co2AvoidedTonnes: tonnes * 1.5,
+      pm25AvoidedKg: tonnes * 18.0,
+      equivalentTrees: (tonnes * 1500 / 21.77).floor(),
+      issuedAt: DateTime.now().toIso8601String(),
+      isValid: true,
+      authority: 'Punjab Clean Air & Agriculture Initiative',
+      verificationNotes: 'Clean mechanical harvest verified. Sentinel-2 SWIR index proves zero fire scars.',
+    );
   }
 }
 

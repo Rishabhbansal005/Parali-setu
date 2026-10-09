@@ -384,6 +384,18 @@ class AppStrings {
   String get ticketNoLabel => isEnglish ? 'Ticket #' : (isHindi ? 'रसीद संख्या' : 'ਪਰਚੀ ਨੰਬਰ /* NEEDS NATIVE REVIEW */');
   String get finalPayoutLabel => isEnglish ? 'Final Direct Payout' : (isHindi ? 'अंतिम शुद्ध भुगतान' : 'ਅੰਤਿਮ ਸ਼ੁੱਧ ਭੁਗਤਾਨ /* NEEDS NATIVE REVIEW */');
 
+  // ── No-Burn Green Certificate ─────────────────────────────────────────────
+  String get certificateTitle => isEnglish ? 'No-Burn Certificate' : (isHindi ? 'नो-बर्न ग्रीन प्रमाणपत्र' : 'ਨੋ-ਬਰਨ ਗ੍ਰੀਨ ਸਰਟੀਫਿਕੇਟ /* NEEDS NATIVE REVIEW */');
+  String get viewCertificateBtn => isEnglish ? 'View No-Burn Certificate' : (isHindi ? 'नो-बर्न प्रमाणपत्र देखें' : 'ਨੋ-ਬਰਨ ਸਰਟੀਫਿਕੇਟ ਦੇਖੋ /* NEEDS NATIVE REVIEW */');
+  String get certificateSubtitle => isEnglish
+      ? 'Sentinel-2 Satellite Verified Clean Harvest'
+      : (isHindi ? 'सेंटिनल-2 उपग्रह द्वारा प्रमाणित स्वच्छ फसल' : 'ਸੈਂਟੀਨਲ-2 ਸੈਟੇਲਾਈਟ ਦੁਆਰਾ ਤਸਦੀਕ ਸਾਫ਼ ਵਾਢੀ /* NEEDS NATIVE REVIEW */');
+  String get co2AvoidedLabel => isEnglish ? 'CO₂ Avoided' : (isHindi ? 'बचाया गया CO₂' : 'ਬਚਾਇਆ ਗਿਆ CO₂ /* NEEDS NATIVE REVIEW */');
+  String get pm25AvoidedLabel => isEnglish ? 'PM₂.₅ Smoke Avoided' : (isHindi ? 'बचाया गया PM₂.₅ धुआं' : 'ਬਚਾਇਆ ਗਿਆ PM₂.₅ ਧੂੰਆਂ /* NEEDS NATIVE REVIEW */');
+  String get treesPlantedLabel => isEnglish ? 'Equivalent Trees' : (isHindi ? 'पेड़ों का संरक्षण' : 'ਰੁੱਖਾਂ ਦੀ ਸਾਂਭ /* NEEDS NATIVE REVIEW */');
+  String get satelliteVerifiedBadge => isEnglish ? 'Sentinel-2 SWIR Verified (ΔNBR < 0.10)' : (isHindi ? 'उपग्रह सत्यापित (ΔNBR < 0.10)' : 'ਸੈਟੇਲਾਈਟ ਤਸਦੀਕ (ΔNBR < 0.10) /* NEEDS NATIVE REVIEW */');
+  String get shareCertificateBtn => isEnglish ? 'Share Certificate' : (isHindi ? 'प्रमाणपत्र साझा करें' : 'ਸਰਟੀਫਿਕੇਟ ਸਾਂਝਾ ਕਰੋ /* NEEDS NATIVE REVIEW */');
+
   // ── General Errors & Network ──────────────────────────────────────────────
   String get serverWakingUp => isEnglish
 

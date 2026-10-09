@@ -5,6 +5,7 @@ import '../models/booking_result.dart';
 import '../models/matched_bundle.dart';
 import '../repositories/farmer_repository.dart';
 import '../theme.dart';
+import 'certificate_screen.dart';
 
 class BookingDetailScreen extends StatefulWidget {
   final BookingResult initialBooking;
@@ -253,7 +254,42 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
                     // Environmental Impact Badge
                     _buildEnvironmentalCard(strings),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
+
+                    if (isPaid) ...[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1B5E20),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 4,
+                          ),
+                          icon: const Icon(Icons.verified, color: Color(0xFFD4AF37), size: 24),
+                          label: Text(
+                            strings.viewCertificateBtn,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => CertificateScreen(
+                                  bookingId: _booking.id,
+                                  repository: widget.repository,
+                                  language: widget.language,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),

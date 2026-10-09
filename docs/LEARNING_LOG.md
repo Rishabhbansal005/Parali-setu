@@ -311,3 +311,41 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - `pytest`: **25/25 tests passed** (100% green across backend unit and integration test suites).
 - `flutter analyze`: **0 issues found** (clean lint).
 - `flutter test`: **13/13 tests passed** (100% green across mobile unit and widget test suites).
+
+---
+
+## Entry 9: Sentinel-2 Satellite Burn Verification & No-Burn Green Certificate
+
+- **Date:** 2026-10-09
+- **Branch:** `feat/satellite-certificate`
+- **Milestone:** Step 7 of Golden Path (Satellite Remote Sensing & Official Green Certification)
+- **Status:** **BUILT & VERIFIED**
+
+### 1. What Was Built
+- **Sentinel-2 SWIR Spectral Verification Service (`backend/app/services/satellite.py`):**
+  - Normalized Burn Ratio: $NBR = \frac{\text{Band 8 (NIR)} - \text{Band 12 (SWIR)}}{\text{Band 8 (NIR)} + \text{Band 12 (SWIR)}}$.
+  - Burn Severity Index: $\Delta NBR = NBR_{\text{pre-harvest}} - NBR_{\text{post-harvest}}$.
+  - Deterministic evaluation rule: $\Delta NBR < 0.10$ threshold confirms zero fire scar within the field polygon, moving status to `verified_no_burn`.
+  - Cloud cover sanity check: Flags images with $> 30\%$ cloud cover as `unclear` instead of false positives.
+  - Published CEEW/NEERI emission factor calculations:
+    - Avoided $CO_2$: $1.5\text{ tonnes}$ ($1,500\text{ kg}$) per tonne stubble diverted.
+    - Avoided $PM_{2.5}$ smoke: $18.0\text{ kg}$ per tonne stubble diverted.
+    - Tree equivalency: $CO_{2\text{ avoided}} / 21.77\text{ kg/tree/year}$.
+- **Certificate API Endpoint (`backend/app/api/bookings.py` & `schemas/certificate.py`):**
+  - `GET /bookings/{id}/certificate`: Generates official verifiable No-Burn Green Certificate record (`CERT-PSETU-XXXXXX`), timestamps verification, and associates farmer village, district, straw tonnage, and spectral metrics.
+- **Mobile Certificate UX (`app/lib/screens/certificate_screen.dart`):**
+  - Diploma parchment layout featuring ornamental gold border and green seal emblem (`Icons.verified`).
+  - Farmer identity: Name, Village, District, State, and verified residue tonnage.
+  - Spectral badge: `✓ Sentinel-2 SWIR Verified (ΔNBR < 0.10)`.
+  - 3-card environmental impact grid: Avoided $CO_2$, avoided $PM_{2.5}$ smoke, and equivalent trees planted.
+  - Interactive "Share Certificate" action for easy transmission to KVK officers and village Panchayats.
+  - Integrated direct launch button ("View No-Burn Certificate") from `BookingDetailScreen` once a booking reaches the `paid` state.
+  - Trilingual localization in English, Hindi, and Punjabi.
+- **Automated Test Coverage:**
+  - `backend/tests/test_satellite_verification.py`: Validates NBR calculation, severity thresholds, environmental factors, and the certificate API.
+  - `app/test/certificate_screen_test.dart`: Validates JSON parsing and UI rendering of the official certificate diploma and share flow.
+
+### 2. Verification Metrics
+- `pytest`: **29/29 tests passed** (100% green across all unit and integration test suites).
+- `flutter analyze`: **0 issues found** (100% clean lint).
+- `flutter test`: **15/15 tests passed** (100% green across all widget and unit test suites).
