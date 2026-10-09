@@ -388,3 +388,39 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - `flutter analyze`: **0 issues found** (100% clean lint).
 - `flutter test`: **20/20 tests passed** (100% green).
 
+---
+
+## Entry 11: Operations Web Portal (Biomass Buyer & Dharamkanta Weighbridge Terminal)
+
+- **Date:** 2026-10-09
+- **Branch:** `feat/web-portal`
+- **Milestone:** Step 5 of Golden Path & Multi-Stakeholder Operations Portal
+- **Status:** **BUILT & VERIFIED**
+
+### 1. What Was Built
+- **Unified Next.js 15 Web Portal (`web/portal`):**
+  - Modern TypeScript + Tailwind CSS App Router architecture with glassmorphic cards and dark slate visual aesthetic.
+  - Automated backend health checker communicating with FastAPI `/health`.
+- **Dharamkanta Weighbridge Operator Terminal (Step 5 Golden Path Hero):**
+  - Mobile-responsive digital slip entry form: Gross & Tare weight inputs with automated certified net tonnage calculation.
+  - Anti-tamper sanity validation enforcing $|\text{Gross} - \text{Tare} - \text{Net}| \le 0.02\text{ t}$.
+  - Printed Dharamkanta thermal receipt replica with barcode, truck number, and gross/tare metrics.
+  - Direct 1-click **"Certify Weighbridge Ticket & Release Escrow"** action: Synchronizes with backend `/bookings/{id}/weighbridge` to update booking state to `paid` and release simulated farmer payout.
+- **Biomass Buyer Command Center (Bio-CNG & Pellet Plants):**
+  - Daily straw intake quota manager (50–500 tonnes/day) and purchase rate setter (₹/tonne).
+  - Simulated escrow balance indicator (₹3,00,000) securing incoming farmer contracts.
+  - Real-time incoming delivery tracker showing truck numbers, assigned transporters, and field tonnages.
+- **KVK & District Agriculture Officer Compliance:**
+  - District diversion metrics: 1,420 Tonnes diverted, 2,130 Tonnes CO₂ prevented, 25,560 kg PM₂.₅ smoke avoided, 97,841 trees saved.
+  - Sentinel-2 SWIR NBR spectral verification monitor displaying clean fields ($\Delta NBR < 0.10$).
+  - 1-click ₹1,000/Acre state ex-situ management subsidy approval queue.
+- **Golden Path Live Bridge:**
+  - Interactive end-to-end milestone tracker linking the Flutter farmer app with the Next.js operations portal.
+
+### 2. Verification Metrics
+- `npm run build` (Next.js): **100% clean build (Turbopack, TypeScript, Static Pages)**.
+- `pytest`: **35/35 tests passed** (100% green).
+- `flutter test`: **20/20 tests passed** (100% green).
+- `flutter analyze`: **0 issues found** (clean lint).
+
+
