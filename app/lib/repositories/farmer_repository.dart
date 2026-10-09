@@ -11,6 +11,7 @@ import '../models/user_profile.dart';
 import '../models/matched_bundle.dart';
 import '../models/booking_result.dart';
 import '../models/certificate_result.dart';
+import '../models/voice_intake_result.dart';
 
 class AuthTokens {
   final String accessToken;
@@ -89,6 +90,12 @@ abstract class FarmerRepository {
   });
   Future<CertificateResult> getCertificate({
     required String bookingId,
+    Function(String)? onStatusUpdate,
+  });
+  Future<VoiceIntakeResult> parseVoiceInput({
+    required String transcript,
+    String language = 'hi',
+    String? referenceDate,
     Function(String)? onStatusUpdate,
   });
 }
@@ -612,6 +619,42 @@ class ApiFarmerRepository implements FarmerRepository {
       },
     );
   }
+
+  @override
+  Future<VoiceIntakeResult> parseVoiceInput({
+    required String transcript,
+    String language = 'hi',
+    String? referenceDate,
+    Function(String)? onStatusUpdate,
+  }) async {
+    return _executeWithRetry(
+      onStatusUpdate: onStatusUpdate,
+      action: () async {
+        final token = _cachedAccessToken ?? await _storage.read(key: AppConstants.keyAccessToken) ?? '';
+        final uri = Uri.parse('$baseUrl/voice/parse');
+        final response = await _client.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            if (token.isNotEmpty) 'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'transcript': transcript,
+            'language': language,
+            if (referenceDate != null) ...{'reference_date': referenceDate},
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return VoiceIntakeResult.fromJson(data);
+        } else {
+          final errorData = jsonDecode(response.body);
+          throw Exception(errorData['detail'] ?? 'Failed to parse voice input');
+        }
+      },
+    );
+  }
 }
 
 class MockFarmerRepository implements FarmerRepository {
@@ -961,6 +1004,71 @@ class MockFarmerRepository implements FarmerRepository {
       isValid: true,
       authority: 'Punjab Clean Air & Agriculture Initiative',
       verificationNotes: 'Clean mechanical harvest verified. Sentinel-2 SWIR index proves zero fire scars.',
+    );
+  }
+
+  @override
+  Future<VoiceIntakeResult> parseVoiceInput({
+    required String transcript,
+    String language = 'hi',
+    String? referenceDate,
+    Function(String)? onStatusUpdate,
+  }) async {
+    onStatusUpdate?.call('Analyzing voice audio...');
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    final clean = transcript.toLowerCase();
+    double acres = 4.0;
+    String variety = 'PR-126';
+    String harvestDate = '2026-10-25';
+
+    if (clean.contains('10 bigha') || clean.contains('10 bighe') || clean.contains('10 ਬੀਘੇ') || clean.contains('10 बीघा')) {
+      acres = 2.0;
+    } else if (clean.contains('6 killa') || clean.contains('6 ਕਿੱਲੇ') || clean.contains('6 किल्ले')) {
+      acres = 6.0;
+    } else if (clean.contains('2 killa') || clean.contains('2 ਕਿੱਲੇ') || clean.contains('2 किल्ले')) {
+      acres = 2.0;
+    } else if (clean.contains('5 killa') || clean.contains('5 ਕਿੱਲੇ') || clean.contains('5 किल्ले')) {
+      acres = 5.0;
+    } else if (clean.contains('4 killa') || clean.contains('4 ਕਿੱਲੇ') || clean.contains('4 किल्ले')) {
+      acres = 4.0;
+    }
+
+    if (clean.contains('pusa-44') || clean.contains('pusa 44') || clean.contains('ਪੂਸਾ 44') || clean.contains('पूसा 44') || clean.contains('44')) {
+      variety = 'Pusa-44';
+    } else if (clean.contains('basmati') || clean.contains('ਬਾਸਮਤੀ') || clean.contains('बासमती')) {
+      variety = 'Basmati';
+    } else {
+      variety = 'PR-126';
+    }
+
+    if (clean.contains('25') || clean.contains('25 october') || clean.contains('25 ਅਕਤੂਬਰ') || clean.contains('25 अक्टूबर')) {
+      harvestDate = '2026-10-25';
+    } else if (clean.contains('28') || clean.contains('28 ਅਕਤੂਬਰ') || clean.contains('28 october')) {
+      harvestDate = '2026-10-28';
+    } else if (clean.contains('26 october') || clean.contains('26 ਅਕਤੂਬਰ') || clean.contains('26 tareek') || clean.contains('26 तारीख')) {
+      harvestDate = '2026-10-26';
+    } else if (clean.contains('kal') || clean.contains('ਕੱਲ੍ਹ') || clean.contains('कल')) {
+      harvestDate = '2026-10-21';
+    } else if (clean.contains('parso') || clean.contains('ਪਰਸੋਂ') || clean.contains('परसों')) {
+      harvestDate = '2026-10-22';
+    } else {
+      harvestDate = '2026-10-25';
+    }
+
+    final prompt = language == 'pa'
+        ? 'ਤੁਸੀਂ ਕਿਹਾ: ${acres.toStringAsFixed(0)} ਕਿੱਲਾ $variety, 25 ਅਕਤੂਬਰ। ਕੀ ਇਹ ਸਹੀ ਹੈ?'
+        : (language == 'en'
+            ? 'You said: ${acres.toStringAsFixed(0)} Acres $variety, 25 October. Is this correct?'
+            : 'आपने बोला: ${acres.toStringAsFixed(0)} किल्ला $variety, 25 अक्टूबर। सही है?');
+
+    return VoiceIntakeResult(
+      acres: acres,
+      variety: variety,
+      harvestDate: harvestDate,
+      confidence: 0.94,
+      confirmationPrompt: prompt,
+      transcriptRecognized: transcript,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../l10n/app_strings.dart';
+import '../models/voice_intake_result.dart';
 import '../repositories/farmer_repository.dart';
 import '../theme.dart';
 import 'estimate_screen.dart';
@@ -40,21 +41,43 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
   String _selectedHarvestMethod = 'combine';
   DateTime _harvestDate = DateTime(2026, 10, 20);
 
-  bool _isMicPressed = false;
+  bool _voiceAutoFilled = false;
+  String? _lastVoiceTranscript;
   bool _isLoading = false;
   String _statusMessage = '';
   String? _errorMessage;
 
   void _onMicTap() {
-    setState(() {
-      _isMicPressed = true;
-    });
-    // Friendly voice placeholder notification per SPEC §13
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppStrings(_lang).micComingSoon),
-        backgroundColor: AppTheme.paraliGold,
-        duration: const Duration(seconds: 3),
+    _showVoiceIntakeSheet();
+  }
+
+  void _showVoiceIntakeSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => _VoiceIntakeSheetContent(
+        language: _lang,
+        repository: _repository,
+        onConfirmed: (VoiceIntakeResult result) {
+          setState(() {
+            _acres = result.acres;
+            _selectedVariety = result.variety;
+            final parsedDt = DateTime.tryParse(result.harvestDate);
+            if (parsedDt != null) {
+              _harvestDate = parsedDt;
+            }
+            _voiceAutoFilled = true;
+            _lastVoiceTranscript = result.transcriptRecognized;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${AppStrings(_lang).voiceRecognizedBadge}: ${result.acres} Acres, ${result.variety}'),
+              backgroundColor: AppTheme.primaryGreen,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        },
       ),
     );
   }
@@ -73,7 +96,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
         areaAcres: _acres,
         variety: _selectedVariety,
         harvestMethod: _selectedHarvestMethod,
-
         onStatusUpdate: (msg) {
           if (mounted) setState(() => _statusMessage = msg);
         },
@@ -129,28 +151,27 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Voice Intake Mic Placeholder (SPEC §13 requirement)
+              // Voice Intake Mic CTA
               Center(
                 child: Column(
                   children: [
                     GestureDetector(
+                      key: const Key('voice_intake_mic_button'),
                       onTap: _onMicTap,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                      child: Container(
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: _isMicPressed ? AppTheme.paraliGold : AppTheme.primaryGreen,
+                          color: _voiceAutoFilled ? AppTheme.secondaryGreen : AppTheme.primaryGreen,
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: (_isMicPressed ? AppTheme.paraliGold : AppTheme.primaryGreen).withValues(alpha: 0.3),
-                              blurRadius: 16,
+                              color: AppTheme.primaryGreen.withValues(alpha: 0.35),
+                              blurRadius: 18,
                               spreadRadius: 4,
                             ),
                           ],
                         ),
-
                         child: const Icon(
                           Icons.mic,
                           size: 46,
@@ -167,6 +188,40 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
                         color: AppTheme.textMuted,
                       ),
                     ),
+                    if (_voiceAutoFilled) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppTheme.primaryGreen),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.check_circle, color: AppTheme.primaryGreen, size: 16),
+                            const SizedBox(width: 6),
+                            Text(
+                              strings.voiceRecognizedBadge,
+                              style: const TextStyle(
+                                color: AppTheme.primaryGreen,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_lastVoiceTranscript != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            '"$_lastVoiceTranscript"',
+                            style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: AppTheme.textMuted),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -427,7 +482,6 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
             width: isSelected ? 2 : 1,
           ),
         ),
-
         child: Column(
           children: [
             Icon(icon, color: isSelected ? AppTheme.primaryGreen : AppTheme.textMuted, size: 30),
@@ -444,6 +498,361 @@ class _FieldDetailsScreenState extends State<FieldDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Modal Bottom Sheet implementing Vernacular Voice Intake & AI Directive 1 Confirmation
+class _VoiceIntakeSheetContent extends StatefulWidget {
+  final AppLanguage language;
+  final FarmerRepository repository;
+  final ValueChanged<VoiceIntakeResult> onConfirmed;
+
+  const _VoiceIntakeSheetContent({
+    required this.language,
+    required this.repository,
+    required this.onConfirmed,
+  });
+
+  @override
+  State<_VoiceIntakeSheetContent> createState() => _VoiceIntakeSheetContentState();
+}
+
+class _VoiceIntakeSheetContentState extends State<_VoiceIntakeSheetContent> {
+  final TextEditingController _transcriptController = TextEditingController();
+  bool _isAnalyzing = false;
+  VoiceIntakeResult? _parsedResult;
+  String? _errorMessage;
+
+  AppStrings get _strings => AppStrings(widget.language);
+
+  final List<String> _demoSamples = [
+    '4 killa PR-126, 25 October',
+    '6 ਕਿੱਲੇ Pusa-44, 28 ਅਕਤੂਬਰ',
+    '10 bigha Basmati, kal',
+  ];
+
+  @override
+  void dispose() {
+    _transcriptController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _processTranscript(String transcript) async {
+    if (transcript.trim().isEmpty) return;
+
+    setState(() {
+      _isAnalyzing = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final langCode = widget.language == AppLanguage.punjabi ? 'pa' : (widget.language == AppLanguage.english ? 'en' : 'hi');
+      final result = await widget.repository.parseVoiceInput(
+        transcript: transcript,
+        language: langCode,
+      );
+
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _parsedResult = result;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzing = false;
+          _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 14,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle pill
+          Center(
+            child: Container(
+              width: 48,
+              height: 5,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // If result is parsed, show AI Directive 1 Confirmation Dialog
+          if (_parsedResult != null)
+            _buildConfirmationCard(_parsedResult!)
+          else
+            _buildListeningAndInputSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListeningAndInputSection() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Pulsing Mic Icon
+        Center(
+          child: Container(
+            width: 76,
+            height: 76,
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGreen.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Icon(Icons.mic, color: AppTheme.primaryGreen, size: 42),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        // Title & Vernacular hint
+        Text(
+          _strings.listeningTitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.textDark,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _strings.voiceHint,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.textMuted,
+          ),
+        ),
+        const SizedBox(height: 18),
+
+        // Text input field with direct analyze button
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                key: const Key('voice_transcript_input'),
+                controller: _transcriptController,
+                decoration: InputDecoration(
+                  hintText: '4 killa PR-126, 25 October...',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: Color(0xFFC8D6C8)),
+                  ),
+                ),
+                onSubmitted: (val) => _processTranscript(val),
+              ),
+            ),
+            const SizedBox(width: 10),
+            IconButton.filled(
+              key: const Key('voice_analyze_button'),
+              onPressed: _isAnalyzing ? null : () => _processTranscript(_transcriptController.text),
+              icon: _isAnalyzing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward),
+              style: IconButton.styleFrom(
+                backgroundColor: AppTheme.primaryGreen,
+                padding: const EdgeInsets.all(12),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Demo Speech Samples for 1-tap testing
+        Text(
+          _strings.trySampleVoice,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textMuted),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _demoSamples.map((sample) {
+            return ActionChip(
+              avatar: const Icon(Icons.record_voice_over, size: 16, color: AppTheme.primaryGreen),
+              label: Text(sample, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              backgroundColor: const Color(0xFFF0F6F0),
+              side: const BorderSide(color: Color(0xFFC8D6C8)),
+              onPressed: _isAnalyzing
+                  ? null
+                  : () {
+                      _transcriptController.text = sample;
+                      _processTranscript(sample);
+                    },
+            );
+          }).toList(),
+        ),
+
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _errorMessage!,
+            style: const TextStyle(color: Colors.red, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Mandatory Confirmation Card (AI Directive #1):
+  /// "Aapne bola: 4 Killa PR-126, 25 October. Sahi hai?"
+  Widget _buildConfirmationCard(VoiceIntakeResult result) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.verified, color: AppTheme.primaryGreen, size: 22),
+            const SizedBox(width: 8),
+            Text(
+              _strings.voiceConfirmTitle,
+              style: const TextStyle(
+                fontSize: 19,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Spoken prompt bubble (The Golden AI Directive 1 feedback)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFBF7EE), // Parchment / Warm gold tint
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.paraliGold, width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.volume_up, color: Color(0xFF8D6E14), size: 24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      result.confirmationPrompt,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF8D6E14),
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              const Divider(color: Color(0xFFE8DCC2)),
+              const SizedBox(height: 8),
+
+              // 3-Card Summary Badges
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildEntityBadge(Icons.landscape, '${result.acres} Acres'),
+                  _buildEntityBadge(Icons.grass, result.variety),
+                  _buildEntityBadge(Icons.calendar_today, result.harvestDate),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+
+        // Action Buttons: [Confirm / Haan Sahi Hai] and [Retry / Dobara Boliye]
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                key: const Key('voice_retry_button'),
+                onPressed: () {
+                  setState(() {
+                    _parsedResult = null;
+                    _transcriptController.clear();
+                  });
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(_strings.retryVoiceBtn),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppTheme.textMuted),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 1,
+              child: ElevatedButton.icon(
+                key: const Key('voice_confirm_yes_button'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  widget.onConfirmed(result);
+                },
+                icon: const Icon(Icons.check_circle),
+                label: Text(_strings.confirmYesBtn),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGreen,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEntityBadge(IconData icon, String text) {
+    return Column(
+      children: [
+        Icon(icon, size: 20, color: AppTheme.primaryGreen),
+        const SizedBox(height: 4),
+        Text(
+          text,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+        ),
+      ],
     );
   }
 }

@@ -349,3 +349,42 @@ To maintain integrity per Rule 9b, all capabilities are tracked below:
 - `pytest`: **29/29 tests passed** (100% green across all unit and integration test suites).
 - `flutter analyze`: **0 issues found** (100% clean lint).
 - `flutter test`: **15/15 tests passed** (100% green across all widget and unit test suites).
+
+---
+
+## Entry 10: Vernacular Voice Intake & AI Directive 1 Confirmation
+
+- **Date:** 2026-10-09
+- **Branch:** `feat/voice-intake`
+- **Milestone:** Step 1 of Golden Path (Voice-First Vernacular Intake & Farmer Confirmation)
+- **Status:** **BUILT & VERIFIED**
+
+### 1. What Was Built
+- **Vernacular Voice Parser Engine (`backend/app/services/voice_parser.py`):**
+  - Land area normalization: Punjab/Haryana Killa ($1.0\text{ Acre}$), Punjab Bigha ($0.20\text{ Acre}$), and Hectares ($2.471\text{ Acres}$).
+  - Multi-script numeral parsing: Supports words and digits across Devanagari (एक, दो, तीन, चार), Gurmukhi (ਇੱਕ, ਦੋ, ਤਿੰਨ, ਚਾਰ), Hinglish, and English.
+  - Paddy variety matching: Standardizes mentions to `PR-126`, `Pusa-44`, `Basmati`, or `other`.
+  - Date resolution: Handles relative terms (`aaj`, `kal`, `parso`, `tarso`) as well as explicit dates (`25 tareek`, `25 October`, `25 ਅਕਤੂਬਰ`).
+  - Conversational verification prompt generator enforcing **AI Directive #1** (*"आपने बोला: 4 किल्ला PR-126, 25 अक्टूबर। सही है?"* / *"ਤੁਸੀਂ ਕਿਹਾ: 4 ਕਿੱਲਾ PR-126, 25 ਅਕਤੂਬਰ। ਕੀ ਇਹ ਸਹੀ ਹੈ?"*).
+- **FastAPI Endpoint (`backend/app/api/voice.py` & `schemas/voice.py`):**
+  - `POST /voice/parse`: Returns normalized `acres`, `variety`, `harvest_date`, `confidence`, and conversational `confirmation_prompt`.
+  - Registered in `backend/app/main.py`.
+- **Mobile Frontend UX (`app/lib/screens/field_details_screen.dart`):**
+  - Active microphone CTA with animated ripple indicator.
+  - Interactive bottom sheet with sound visualizer, direct transcript input, and 3 one-tap speech sample chips for seamless judge demonstration.
+  - Mandatory AI Directive 1 Confirmation Card: Displays spoken text, 3-metric entity breakdown, and [Yes, Correct] vs [Speak Again] buttons.
+  - One-tap pre-fill: Automatically sets acres stepper, variety choice chips, and harvest date calendar upon farmer confirmation, displaying the "Voice Auto-Filled" badge.
+  - Retains 100% manual control over all inputs as fallback (AI Directive #3).
+- **Client Architecture & Localization:**
+  - Added `VoiceIntakeResult` data model in `app/lib/models/voice_intake_result.dart`.
+  - Added `parseVoiceInput` method to `FarmerRepository`, `ApiFarmerRepository`, and `MockFarmerRepository`.
+  - Added trilingual localization keys in English, Hindi, and Punjabi in `app/lib/l10n/app_strings.dart`.
+- **Automated Test Coverage:**
+  - `backend/tests/test_voice_parser.py`: 6 tests validating unit conversions (Killa, Bigha), varieties, relative dates, and the `/voice/parse` endpoint.
+  - `app/test/voice_intake_test.dart`: 5 tests covering mock repository extraction and the complete Flutter widget flow (Mic Tap -> Sample Chip -> Confirmation Card -> Apply -> Auto-Fill).
+
+### 2. Verification Metrics
+- `pytest`: **35/35 tests passed** (100% green).
+- `flutter analyze`: **0 issues found** (100% clean lint).
+- `flutter test`: **20/20 tests passed** (100% green).
+

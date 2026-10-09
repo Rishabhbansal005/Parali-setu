@@ -396,6 +396,18 @@ class AppStrings {
   String get satelliteVerifiedBadge => isEnglish ? 'Sentinel-2 SWIR Verified (ΔNBR < 0.10)' : (isHindi ? 'उपग्रह सत्यापित (ΔNBR < 0.10)' : 'ਸੈਟੇਲਾਈਟ ਤਸਦੀਕ (ΔNBR < 0.10) /* NEEDS NATIVE REVIEW */');
   String get shareCertificateBtn => isEnglish ? 'Share Certificate' : (isHindi ? 'प्रमाणपत्र साझा करें' : 'ਸਰਟੀਫਿਕੇਟ ਸਾਂਝਾ ਕਰੋ /* NEEDS NATIVE REVIEW */');
 
+  // ── Voice Intake Strings ──────────────────────────────────────────────────
+  String get voiceIntakeBtn => isEnglish ? 'Speak Details' : (isHindi ? 'बोलकर बताएं' : 'ਬੋਲ ਕੇ ਦੱਸੋ /* NEEDS NATIVE REVIEW */');
+  String get listeningTitle => isEnglish ? 'Listening...' : (isHindi ? 'सुन रहे हैं...' : 'ਸੁਣ ਰਹੇ ਹਾਂ... /* NEEDS NATIVE REVIEW */');
+  String get voiceHint => isEnglish
+      ? 'Speak naturally: "4 killa PR-126, 25 October"'
+      : (isHindi ? 'आसानी से बोलें: "4 किल्ला PR-126, 25 अक्टूबर"' : 'ਆਰਾਮ ਨਾਲ ਬੋਲੋ: "4 ਕਿੱਲੇ PR-126, 25 ਅਕਤੂਬਰ" /* NEEDS NATIVE REVIEW */');
+  String get voiceConfirmTitle => isEnglish ? 'Confirm Details' : (isHindi ? 'जानकारी की पुष्टि करें' : 'ਜਾਣਕਾਰੀ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ /* NEEDS NATIVE REVIEW */');
+  String get confirmYesBtn => isEnglish ? 'Yes, Correct' : (isHindi ? 'हाँ, सही है' : 'ਹਾਂ, ਸਹੀ ਹੈ /* NEEDS NATIVE REVIEW */');
+  String get retryVoiceBtn => isEnglish ? 'Speak Again' : (isHindi ? 'दोबारा बोलिए' : 'ਦੁਬਾਰਾ ਬੋਲੋ /* NEEDS NATIVE REVIEW */');
+  String get trySampleVoice => isEnglish ? 'Or tap demo speech sample:' : (isHindi ? 'या डेमो वॉइस सैंपल चुनें:' : 'ਜਾਂ ਡੈਮੋ ਆਵਾਜ਼ ਸੈਂਪਲ ਚੁਣੋ: /* NEEDS NATIVE REVIEW */');
+  String get voiceRecognizedBadge => isEnglish ? 'Voice Auto-Filled' : (isHindi ? 'आवाज से भरा गया' : 'ਆਵਾਜ਼ ਨਾਲ ਭਰਿਆ ਗਿਆ /* NEEDS NATIVE REVIEW */');
+
   // ── General Errors & Network ──────────────────────────────────────────────
   String get serverWakingUp => isEnglish
 
